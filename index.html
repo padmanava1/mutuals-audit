@@ -1,0 +1,1865 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100 antialiased">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mutuals Audit — 100% Local Social Follower Audit</title>
+  <meta name="description" content="A 100% client-side, privacy-first web application that audits non-mutual followers from your official data export in browser memory.">
+  <meta name="theme-color" content="#020617">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- JSZip for 100% local in-browser zip decompression -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <style>
+    /* Custom scrollbar and subtle glowing utilities */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    .glow-border:focus-within {
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.25);
+    }
+    .speed-glow {
+      box-shadow: 0 0 25px rgba(99, 102, 241, 0.35);
+    }
+  </style>
+</head>
+<body class="min-h-full flex flex-col bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
+
+  <!-- Sticky Top Header & Privacy Badge -->
+  <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <!-- Brand Logo -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white font-bold text-xl">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </div>
+        <div>
+          <span class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            Mutuals Audit
+            <span class="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Client-Side</span>
+          </span>
+          <p class="text-xs text-slate-400 hidden sm:block">Privacy-first non-mutual follower review</p>
+        </div>
+      </div>
+
+      <!-- Action & Privacy Badges -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <!-- Safety & Rate Limits Modal Button -->
+        <button 
+          type="button" 
+          id="openSafetyModalBtn"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700 hover:border-indigo-500/50 text-slate-300 hover:text-white text-xs font-medium transition-colors"
+          title="Learn how to unfollow 1000+ accounts safely without action limits or account bans"
+        >
+          <span class="text-indigo-400">🛡️</span>
+          <span class="hidden sm:inline">Rate Limits &amp; Safety</span>
+          <span class="sm:hidden">Safety</span>
+        </button>
+
+        <!-- Privacy & Zero Server Badge -->
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          <span class="hidden md:inline">100% Local Memory</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- Collapsible Verified Step-by-Step Export Guide -->
+    <section class="border border-slate-800 bg-slate-900/60 rounded-2xl overflow-hidden shadow-sm">
+      <button id="toggleGuideBtn" class="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-slate-800/40 transition-colors" aria-expanded="true">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-sm border border-indigo-500/20">
+            ?
+          </div>
+          <div>
+            <h2 class="text-base font-semibold text-slate-100 flex items-center gap-2">
+              Verified Guide: How to Request Your Data Export
+              <span class="text-xs font-normal text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Ready in ~2 minutes</span>
+            </h2>
+            <p class="text-xs text-slate-400">Follow these 5 exact steps in your platform's Accounts Center to get the JSON file quickly.</p>
+          </div>
+        </div>
+        <svg id="guideChevron" class="w-5 h-5 text-slate-400 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <div id="guideContent" class="px-6 pb-6 pt-2 border-t border-slate-800/60 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+          
+          <!-- Step 1 -->
+          <div class="bg-slate-950/70 border border-slate-800/80 rounded-xl p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">STEP 1</span>
+                <span class="text-xs text-slate-400">Settings</span>
+              </div>
+              <h3 class="text-sm font-semibold text-white">Navigate to Accounts Center</h3>
+              <p class="text-xs text-slate-300 mt-1">
+                Open your app or web profile &rarr; Menu (<span class="font-mono">☰</span>) &rarr; <strong class="text-white">Settings and privacy</strong> &rarr; <strong class="text-white">Accounts Center</strong> &rarr; <strong class="text-white">Your information and permissions</strong>.
+              </p>
+            </div>
+            <!-- Screenshot Slot / Container -->
+            <div class="step-screenshot-container border border-dashed border-slate-800 rounded-lg p-2.5 bg-slate-900/40 text-center">
+              <div class="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 font-mono">
+                <svg class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                <span>Accounts Center &gt; Your Info</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="bg-slate-950/70 border border-slate-800/80 rounded-xl p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">STEP 2</span>
+                <span class="text-xs text-slate-400">Export Method</span>
+              </div>
+              <h3 class="text-sm font-semibold text-white">Export to Device</h3>
+              <p class="text-xs text-slate-300 mt-1">
+                Tap <strong class="text-white">Export your information</strong> &rarr; choose <strong class="text-white">Export to device</strong> &rarr; select <strong class="text-indigo-300">Customize information</strong>.
+              </p>
+              <p class="text-[11px] text-amber-400/90 mt-1">⚠️ Do NOT choose "All available information" (that includes heavy photos/videos).</p>
+            </div>
+            <div class="step-screenshot-container border border-dashed border-slate-800 rounded-lg p-2.5 bg-slate-900/40 text-center">
+              <div class="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 font-mono">
+                <svg class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                <span>Choose: Customize information</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="bg-slate-950/70 border border-slate-800/80 rounded-xl p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">STEP 3 (CRITICAL)</span>
+                <span class="text-xs text-slate-400">Selection</span>
+              </div>
+              <h3 class="text-sm font-semibold text-white">Select Followers & Following ONLY</h3>
+              <p class="text-xs text-slate-300 mt-1">
+                Click <strong class="text-white">Clear all</strong>, then scroll and select <strong class="text-emerald-300">"Followers and following"</strong> only.
+              </p>
+              <p class="text-[11px] text-emerald-400 mt-1">✨ Selecting only followers takes &lt;2 min to generate instead of several hours.</p>
+            </div>
+            <div class="step-screenshot-container border border-dashed border-slate-800 rounded-lg p-2.5 bg-slate-900/40 text-center">
+              <div class="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 font-mono">
+                <svg class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>Clear all &gt; Check Followers & Following</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4 -->
+          <div class="bg-slate-950/70 border border-slate-800/80 rounded-xl p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">STEP 4</span>
+                <span class="text-xs text-slate-400">Settings</span>
+              </div>
+              <h3 class="text-sm font-semibold text-white">Date Range & Format</h3>
+              <ul class="text-xs text-slate-300 space-y-1 mt-1">
+                <li>• Date range: <strong class="text-indigo-300">All time</strong> (so no follows are missed)</li>
+                <li>• Format: <strong class="text-amber-300 font-bold">JSON</strong> <span class="text-[10px] text-red-400">(NOT HTML)</span></li>
+                <li>• Media quality: <strong class="text-slate-300">Low</strong> (faster delivery)</li>
+              </ul>
+            </div>
+            <div class="step-screenshot-container border border-dashed border-slate-800 rounded-lg p-2.5 bg-slate-900/40 text-center">
+              <div class="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 font-mono">
+                <svg class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+                <span>Format: JSON &bull; Range: All time</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 5 -->
+          <div class="bg-slate-950/70 border border-slate-800/80 rounded-xl p-4 flex flex-col justify-between space-y-3 md:col-span-2 lg:col-span-2">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">STEP 5</span>
+                <span class="text-xs text-slate-400">Audit</span>
+              </div>
+              <h3 class="text-sm font-semibold text-white">Download & Drop Archive Below</h3>
+              <p class="text-xs text-slate-300 mt-1">
+                You will receive an in-app and email notification within 2–5 minutes. Download the <strong class="text-white">.zip</strong> file and drag it directly into the drop zone below (or extract and drop the JSON files).
+              </p>
+            </div>
+            <div class="step-screenshot-container border border-dashed border-slate-800 rounded-lg p-2.5 bg-slate-900/40 text-center flex items-center justify-center gap-2 text-xs text-slate-400">
+              <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
+              <span>Download .zip from email or Accounts Center &gt; Drop below</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Upload & Drop Zone Section -->
+    <section id="uploadSection" class="relative">
+      <div 
+        id="dropZone" 
+        class="border-2 border-dashed border-slate-700 hover:border-indigo-500/80 bg-slate-900/40 hover:bg-slate-900/80 rounded-3xl p-8 sm:p-12 text-center transition-all duration-200 cursor-pointer group"
+      >
+        <input type="file" id="fileInput" class="hidden" accept=".zip,.json" multiple>
+        
+        <div class="max-w-md mx-auto space-y-4">
+          <!-- Icon -->
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center group-hover:scale-105 group-hover:bg-indigo-500/20 transition-all duration-200">
+            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+          </div>
+
+          <div>
+            <h3 class="text-lg font-semibold text-white">Drop your export .zip file here</h3>
+            <p class="text-sm text-slate-400 mt-1">or browse for your archive or raw <span class="font-mono text-slate-300">followers_*.json</span> & <span class="font-mono text-slate-300">following.json</span></p>
+          </div>
+
+          <div class="pt-2 flex flex-wrap items-center justify-center gap-3">
+            <button 
+              type="button" 
+              id="browseBtn"
+              class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-all shadow-lg shadow-indigo-600/30 flex items-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              Select Files
+            </button>
+
+            <!-- One-Click Sample Data Demo Button -->
+            <button 
+              type="button" 
+              id="loadSampleBtn"
+              class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium border border-slate-700 transition-all flex items-center gap-2"
+              title="Test the complete audit flow immediately with realistic sample followers"
+            >
+              <svg class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+              Try Sample Data
+            </button>
+          </div>
+
+          <div class="text-[11px] text-slate-500 pt-2 flex items-center justify-center gap-4">
+            <span>✓ Multi-part follower files supported</span>
+            <span>•</span>
+            <span>✓ Zero data uploaded</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feedback / Alert Banners -->
+      <div id="alertContainer" class="mt-4 space-y-3 hidden">
+        <!-- Error Alert -->
+        <div id="errorAlert" class="hidden p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm flex items-start gap-3">
+          <svg class="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div id="errorMessage" class="flex-1"></div>
+        </div>
+
+        <!-- Warning Alert -->
+        <div id="warningAlert" class="hidden p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm flex items-start gap-3">
+          <svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <div id="warningMessage" class="flex-1"></div>
+        </div>
+
+        <!-- Loading Progress -->
+        <div id="loadingIndicator" class="hidden p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-sm flex items-center gap-3">
+          <svg class="w-5 h-5 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span id="loadingMessage">Processing files safely in browser memory...</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results Dashboard (Hidden until data parsed) -->
+    <div id="resultsDashboard" class="hidden space-y-6">
+
+      <!-- Summary Metrics Cards -->
+      <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Following -->
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
+          <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Following</span>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="statFollowing" class="text-3xl font-extrabold text-white">0</span>
+            <span class="text-xs text-slate-500">Accounts you follow</span>
+          </div>
+        </div>
+
+        <!-- Followers -->
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
+          <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Followers</span>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="statFollowers" class="text-3xl font-extrabold text-white">0</span>
+            <span class="text-xs text-slate-500">Accounts following you</span>
+          </div>
+        </div>
+
+        <!-- Not Following Back (Highlight) -->
+        <div class="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-5 flex flex-col justify-between shadow-lg shadow-rose-950/20">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-rose-300 uppercase tracking-wider">Not Following Back</span>
+            <span class="text-[10px] font-bold bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full">Review List</span>
+          </div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="statNotFollowing" class="text-3xl font-extrabold text-rose-400">0</span>
+            <span class="text-xs text-rose-300/70">Non-mutual follows</span>
+          </div>
+        </div>
+
+        <!-- Kept / Whitelisted -->
+        <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex flex-col justify-between shadow-lg shadow-amber-950/20">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-amber-300 uppercase tracking-wider">Kept (Whitelisted)</span>
+            <span class="text-[10px] font-bold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">Saved</span>
+          </div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="statWhitelisted" class="text-3xl font-extrabold text-amber-400">0</span>
+            <span class="text-xs text-amber-300/70">Intentional follows</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SAFE DAILY PACING ENGINE (Anti-Ban & Rate Limit Protection) -->
+      <section id="dailyPacingSection" class="bg-gradient-to-r from-slate-900/90 via-indigo-950/20 to-slate-900/90 border border-indigo-500/30 rounded-2xl p-5 shadow-sm space-y-3">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-lg">
+              🛡️
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                Safe Daily Pacing Engine
+                <span id="pacingStatusBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Optimal Safe Pace</span>
+              </h3>
+              <p class="text-xs text-slate-400">Protects your account against anti-bot velocity limits (Recommended: 50–100/day)</p>
+            </div>
+          </div>
+
+          <!-- Daily Target Selector -->
+          <div class="flex items-center gap-2 self-end sm:self-center">
+            <span class="text-xs text-slate-400">Daily Quota:</span>
+            <select id="dailyTargetSelect" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-indigo-500">
+              <option value="30">30 / day (Conservative)</option>
+              <option value="50" selected>50 / day (Recommended)</option>
+              <option value="100">100 / day (Active)</option>
+              <option value="150">150 / day (Maximum Safe)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Progress Bar & Count -->
+        <div class="space-y-1.5 pt-1">
+          <div class="flex justify-between text-xs">
+            <span class="text-slate-400">Today's Reviewed: <strong id="dailyCountText" class="text-white font-bold">0</strong> / <span id="dailyTargetText">50</span> accounts</span>
+            <span id="dailyRemainingText" class="text-slate-400">50 remaining today</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+            <div id="dailyProgressBar" class="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Dynamic Advice Alert -->
+        <div class="text-[11px] text-slate-400 flex items-center justify-between pt-1">
+          <span id="dailyAdviceText">💡 Pacing advice: Space reviews across 2–3 short sessions today. Never rush.</span>
+          <button type="button" id="resetDailyBtn" class="text-slate-500 hover:text-slate-300 transition-colors text-[10px] underline">Reset Today's Count</button>
+        </div>
+      </section>
+
+      <!-- High-Efficiency Action Ribbon -->
+      <section class="bg-indigo-950/30 border border-indigo-500/20 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="space-y-0.5">
+          <span class="text-xs uppercase font-bold text-indigo-400 tracking-wider">Fast &amp; Safe Review Tools</span>
+          <p class="text-xs text-slate-300">Cut manual review time by 80% without triggering platform automation filters.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
+          <!-- Start Speed Queue Button -->
+          <button 
+            type="button" 
+            id="startSpeedQueueBtn"
+            class="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 group speed-glow"
+            title="Open focus review queue with Spacebar navigation"
+          >
+            <span class="text-sm">⚡</span>
+            <span>Speed Review Queue</span>
+            <span class="text-[10px] font-mono bg-black/30 px-1.5 py-0.5 rounded text-indigo-200">Spacebar</span>
+          </button>
+
+          <!-- Open Batch of 5 Profiles -->
+          <button 
+            type="button" 
+            id="openBatch5Btn"
+            class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-all flex items-center gap-1.5"
+            title="Opens next 5 profiles in background tabs at once. Unfollow on each and close with Ctrl+W."
+          >
+            <span>🚀</span>
+            <span>Open Batch of 5</span>
+          </button>
+
+          <!-- Mobile App Link Toggle -->
+          <label class="flex items-center gap-2 cursor-pointer bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-800 text-xs text-slate-300 hover:border-slate-700 select-none" title="When enabled, links open directly in the Instagram Mobile App instead of web browser">
+            <input type="checkbox" id="mobileDeepLinkCheckbox" class="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500">
+            <span class="flex items-center gap-1">
+              <span>📱</span>
+              <span>Open in App</span>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Interactive Toolbar & Filtering Controls -->
+      <section class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+        
+        <!-- Search & Filter Options -->
+        <div class="flex flex-1 flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          <!-- Real-time Search -->
+          <div class="relative flex-1">
+            <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input 
+              type="text" 
+              id="searchInput" 
+              placeholder="Search usernames..." 
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            >
+          </div>
+
+          <!-- Sort Select -->
+          <select 
+            id="sortSelect" 
+            class="px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-300 focus:outline-none focus:border-indigo-500"
+          >
+            <option value="date-desc">Newest Followed First</option>
+            <option value="date-asc">Oldest Followed First (Clean dead accounts)</option>
+            <option value="alpha-asc">Alphabetical (A → Z)</option>
+            <option value="alpha-desc">Alphabetical (Z → A)</option>
+          </select>
+        </div>
+
+        <!-- Whitelist Toggle & Action Buttons -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <!-- Toggle Whitelisted Accounts -->
+          <label class="flex items-center gap-2 cursor-pointer bg-slate-950 px-3.5 py-2 rounded-xl border border-slate-800 text-xs text-slate-300 hover:border-slate-700 select-none">
+            <input type="checkbox" id="hideWhitelistedCheckbox" class="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500">
+            <span>Hide Kept</span>
+          </label>
+
+          <!-- Copy Usernames Button -->
+          <button 
+            type="button" 
+            id="copyListBtn" 
+            class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-colors flex items-center gap-1.5"
+            title="Copy non-mutual usernames to clipboard"
+          >
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
+            <span>Copy Usernames</span>
+          </button>
+
+          <!-- Download CSV Button -->
+          <button 
+            type="button" 
+            id="downloadCsvBtn" 
+            class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium shadow-md shadow-indigo-600/20 transition-all flex items-center gap-1.5"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>Export CSV</span>
+          </button>
+
+          <!-- Reset / New Audit Button -->
+          <button 
+            type="button" 
+            id="resetAuditBtn" 
+            class="px-2.5 py-2 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors text-xs"
+            title="Clear current audit and upload another export"
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- Showing Count Header -->
+      <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+        <div>
+          Showing <span id="displayedCount" class="font-semibold text-white">0</span> non-mutual accounts
+        </div>
+        <div class="text-[11px] text-slate-500 hidden sm:block">
+          💡 Click "View Profile" to open in new tab & mark as reviewed
+        </div>
+      </div>
+
+      <!-- Results Table View (Safe textContent rendering) -->
+      <div class="border border-slate-800 bg-slate-900/40 rounded-2xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-300">
+            <thead class="bg-slate-900/80 text-xs uppercase text-slate-400 border-b border-slate-800 tracking-wider">
+              <tr>
+                <th scope="col" class="py-3.5 px-4 w-12 text-center">#</th>
+                <th scope="col" class="py-3.5 px-4">Account</th>
+                <th scope="col" class="py-3.5 px-4 hidden sm:table-cell">Followed Date</th>
+                <th scope="col" class="py-3.5 px-4 text-center">Status</th>
+                <th scope="col" class="py-3.5 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="resultsTableBody" class="divide-y divide-slate-800/60">
+              <!-- Rendered via JavaScript using strict document.createElement / textContent -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty state when no rows match -->
+        <div id="noResultsState" class="hidden py-16 text-center space-y-3">
+          <div class="w-12 h-12 mx-auto rounded-full bg-slate-800 text-slate-400 flex items-center justify-center">
+            🎉
+          </div>
+          <h4 class="text-base font-semibold text-slate-200">No non-mutual accounts to show</h4>
+          <p class="text-xs text-slate-400 max-w-sm mx-auto">Either all followed accounts follow you back, or all non-mutual accounts have been marked as "Kept".</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- SPEED REVIEW QUEUE (FOCUS MODE) MODAL -->
+  <div id="speedQueueModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden" role="dialog" aria-modal="true">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-6 relative border-indigo-500/20">
+      <!-- Close Button -->
+      <button type="button" id="closeSpeedQueueBtn" class="absolute top-5 right-5 text-slate-400 hover:text-white transition-colors p-1" title="Close (Esc)">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
+
+      <!-- Header & Queue Progress -->
+      <div class="flex items-center justify-between pr-8">
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-bold text-white flex items-center gap-1.5">
+            <span class="text-indigo-400">⚡</span> Speed Review Queue
+          </span>
+          <span id="queueProgressBadge" class="text-[10px] font-mono font-semibold bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30">1 of 50</span>
+        </div>
+      </div>
+
+      <!-- Current Profile Card Display -->
+      <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-6 text-center space-y-4">
+        <!-- Big Avatar -->
+        <div id="queueAvatar" class="w-20 h-20 mx-auto rounded-full flex items-center justify-center font-bold text-2xl text-white shadow-xl bg-indigo-600">
+          ?
+        </div>
+
+        <div>
+          <h3 id="queueUsername" class="text-xl font-bold text-white tracking-tight">@username</h3>
+          <p id="queueFollowedDate" class="text-xs text-slate-400 mt-1">Followed: Oct 14, 2023</p>
+        </div>
+
+        <div id="queueStatusBadges" class="flex items-center justify-center gap-2 pt-1">
+          <span class="text-xs bg-rose-500/10 text-rose-300 border border-rose-500/20 px-2.5 py-0.5 rounded-full font-medium">Not Following Back</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons with Keyboard Shortcut Tags -->
+      <div class="space-y-3">
+        <!-- Main Open & Advance Action -->
+        <button 
+          type="button" 
+          id="queueOpenBtn" 
+          class="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 group"
+        >
+          <span>Open Profile &amp; Mark Reviewed</span>
+          <span class="text-xs font-mono bg-indigo-900/60 px-2 py-0.5 rounded border border-indigo-400/30 text-indigo-200">Spacebar</span>
+          <span class="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+        </button>
+
+        <div class="grid grid-cols-3 gap-2">
+          <!-- Keep / Whitelist Button -->
+          <button 
+            type="button" 
+            id="queueKeepBtn" 
+            class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-medium text-xs border border-amber-500/30 transition-all flex flex-col items-center justify-center gap-1"
+          >
+            <span>★ Keep / Whitelist</span>
+            <span class="text-[10px] font-mono text-slate-400 bg-slate-900 px-1.5 py-0.2 rounded">[K]</span>
+          </button>
+
+          <!-- Skip to Next -->
+          <button 
+            type="button" 
+            id="queueSkipBtn" 
+            class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs border border-slate-700 transition-all flex flex-col items-center justify-center gap-1"
+          >
+            <span>Skip to Next</span>
+            <span class="text-[10px] font-mono text-slate-400 bg-slate-900 px-1.5 py-0.2 rounded">[S or &rarr;]</span>
+          </button>
+
+          <!-- Previous -->
+          <button 
+            type="button" 
+            id="queuePrevBtn" 
+            class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 font-medium text-xs border border-slate-700 transition-all flex flex-col items-center justify-center gap-1"
+          >
+            <span>&larr; Previous</span>
+            <span class="text-[10px] font-mono text-slate-400 bg-slate-900 px-1.5 py-0.2 rounded">[&larr;]</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Speed Queue Pro-Tip -->
+      <div class="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-left text-[11px] text-indigo-300 space-y-1">
+        <p class="font-semibold text-white">⚡ Pro-Tip for 2-Second Reviews:</p>
+        <p>In the new tab, simply tap <strong>Following &rarr; Unfollow</strong>, then switch back and press <kbd class="font-mono bg-slate-900 px-1 rounded">Spacebar</kbd> to automatically load the next profile!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAFETY & RATE LIMITS MODAL -->
+  <div id="safetyModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden" role="dialog" aria-modal="true">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto">
+      <button type="button" id="closeSafetyModalBtn" class="absolute top-5 right-5 text-slate-400 hover:text-white transition-colors p-1" title="Close">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
+
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center text-xl font-bold">
+          🛡️
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white">Account Safety &amp; Rate Limits Guide</h3>
+          <p class="text-xs text-slate-400">How to clean 1,000+ accounts with 0% risk of account blocks or bans.</p>
+        </div>
+      </div>
+
+      <div class="space-y-4 text-xs text-slate-300 leading-relaxed">
+        <!-- Why bots cause bans -->
+        <div class="p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-1.5 text-rose-200">
+          <h4 class="font-bold text-rose-300 flex items-center gap-1.5">
+            <span>⚠️</span> Why 1-Click "Bulk Unfollow" Bots Get Banned
+          </h4>
+          <p>
+            Third-party apps that claim to "bulk unfollow 500 accounts in one click" require your login credentials or session tokens. Instagram's anti-abuse engine detects non-official API calls and foreign device signatures immediately, resulting in <strong>Action Blocked checkpoints</strong>, shadowbans, or permanent account suspensions.
+          </p>
+        </div>
+
+        <!-- The Golden Rate Limits -->
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+          <h4 class="font-bold text-white text-sm">Meta Platform Hourly &amp; Daily Limits:</h4>
+          <ul class="space-y-1.5 text-slate-300">
+            <li class="flex items-start gap-2">
+              <span class="text-emerald-400 font-bold">•</span>
+              <span><strong>Hourly Safe Velocity:</strong> Maximum <strong>40–60 unfollows per hour</strong>.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-emerald-400 font-bold">•</span>
+              <span><strong>Daily Safe Cap:</strong> Maximum <strong>120–180 unfollows per day</strong> (recommended: 50–100/day).</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-emerald-400 font-bold">•</span>
+              <span><strong>Account Age Factor:</strong> Accounts less than 6 months old should stay under <strong>30/hour</strong> and <strong>80/day</strong>.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Mobile Trick: Least Interacted With -->
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+          <h4 class="font-bold text-white text-sm flex items-center gap-1.5">
+            <span>📱</span> Secret Native Mobile App Shortcut:
+          </h4>
+          <p>You can unfollow 50 accounts in ~45 seconds natively without loading profiles:</p>
+          <ol class="list-decimal list-inside space-y-1 text-slate-300 pl-1">
+            <li>Open the Instagram mobile app &rarr; go to your <strong>Profile</strong>.</li>
+            <li>Tap <strong>Following</strong> &rarr; scroll to <strong>Categories</strong> at the top.</li>
+            <li>Tap <strong>"Least Interacted With"</strong> (shows ~50 accounts you haven't engaged with in 90 days).</li>
+            <li>Tap the <strong>Following</strong> button directly next to each name to unfollow with 1 tap.</li>
+          </ol>
+        </div>
+
+        <!-- Safe 1000+ Plan -->
+        <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3.5 space-y-1 text-indigo-300">
+          <h4 class="font-bold text-white">🗓️ Recommended 7-Day Plan for 1,000+ Accounts:</h4>
+          <p>Set Mutuals Audit's Safe Daily Pacing to <strong>100 accounts/day</strong>. Do one session of 50 in the morning with Speed Queue, and one session of 50 in the evening. In <strong>7 to 10 days</strong>, your follow list is completely clean with zero risk to your account.</p>
+        </div>
+      </div>
+
+      <div class="pt-2 text-right">
+        <button type="button" id="confirmSafetyModalBtn" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">
+          Got it, Keep My Account Safe
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-16 opacity-0 pointer-events-none transition-all duration-300 px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 shadow-xl text-xs text-white flex items-center gap-2">
+    <span id="toastIcon">✓</span>
+    <span id="toastMessage">Notification</span>
+  </div>
+
+  <!-- Footer -->
+  <footer class="mt-auto border-t border-slate-800/60 bg-slate-950 py-6 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 space-y-2">
+      <p>Mutuals Audit is 100% open-source and operates strictly client-side. No user data or credentials are ever sent over a network.</p>
+      <p class="text-[11px] text-slate-600">Zero automated unfollowing • Rate-limit safe • Static GitHub Pages deployment</p>
+    </div>
+  </footer>
+
+  <!-- Application Logic -->
+  <script>
+    (function () {
+      'use strict';
+
+      // --- State Management ---
+      let followingUsers = [];     // Array of { username, displayUsername, href, timestamp }
+      let followerSet = new Set();  // Set of follower usernames (lowercase)
+      let nonMutuals = [];         // Array of { username, displayUsername, href, timestamp, whitelisted, checked }
+      
+      const WHITELIST_STORAGE_KEY = 'mutuals_audit_whitelist';
+      const DAILY_PACING_STORAGE_KEY = 'mutuals_audit_daily_progress';
+
+      let whitelistedSet = new Set();
+      let checkedSessionSet = new Set();
+
+      // Daily Pacing State
+      let dailyState = {
+        date: getTodayDateString(),
+        count: 0,
+        target: 50
+      };
+
+      // Speed Queue Active State
+      let queueFilteredList = [];
+      let currentQueueIndex = 0;
+      let isSpeedQueueOpen = false;
+
+      function getTodayDateString() {
+        return new Date().toISOString().split('T')[0];
+      }
+
+      // Load whitelist from localStorage
+      function loadWhitelist() {
+        try {
+          const raw = localStorage.getItem(WHITELIST_STORAGE_KEY);
+          if (raw) {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list)) {
+              whitelistedSet = new Set(list.map(u => String(u).toLowerCase()));
+            }
+          }
+        } catch (e) {
+          console.warn('Could not read whitelist from localStorage', e);
+        }
+      }
+
+      function persistWhitelist() {
+        try {
+          localStorage.setItem(WHITELIST_STORAGE_KEY, JSON.stringify(Array.from(whitelistedSet)));
+        } catch (e) {
+          console.warn('Could not write whitelist to localStorage', e);
+        }
+      }
+
+      // Load daily progress
+      function loadDailyProgress() {
+        try {
+          const raw = localStorage.getItem(DAILY_PACING_STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.date === getTodayDateString()) {
+              dailyState.count = Number(parsed.count) || 0;
+              dailyState.target = Number(parsed.target) || 50;
+            } else {
+              // New day, reset count
+              dailyState.date = getTodayDateString();
+              dailyState.count = 0;
+              dailyState.target = Number(parsed.target) || 50;
+              persistDailyProgress();
+            }
+          }
+        } catch (e) {
+          console.warn('Could not load daily pacing from localStorage', e);
+        }
+        updateDailyPacingUI();
+      }
+
+      function persistDailyProgress() {
+        try {
+          localStorage.setItem(DAILY_PACING_STORAGE_KEY, JSON.stringify(dailyState));
+        } catch (e) {
+          console.warn('Could not save daily pacing to localStorage', e);
+        }
+      }
+
+      function incrementDailyProgress(amount = 1) {
+        if (dailyState.date !== getTodayDateString()) {
+          dailyState.date = getTodayDateString();
+          dailyState.count = 0;
+        }
+        dailyState.count += amount;
+        persistDailyProgress();
+        updateDailyPacingUI();
+      }
+
+      function updateDailyPacingUI() {
+        const countText = document.getElementById('dailyCountText');
+        const targetText = document.getElementById('dailyTargetText');
+        const remainingText = document.getElementById('dailyRemainingText');
+        const progressBar = document.getElementById('dailyProgressBar');
+        const statusBadge = document.getElementById('pacingStatusBadge');
+        const adviceText = document.getElementById('dailyAdviceText');
+        const targetSelect = document.getElementById('dailyTargetSelect');
+
+        if (!countText) return;
+
+        targetSelect.value = String(dailyState.target);
+        countText.textContent = String(dailyState.count);
+        targetText.textContent = String(dailyState.target);
+
+        const remaining = Math.max(0, dailyState.target - dailyState.count);
+        remainingText.textContent = remaining > 0 ? `${remaining} remaining today` : 'Daily quota completed!';
+
+        const pct = Math.min(100, Math.round((dailyState.count / dailyState.target) * 100));
+        progressBar.style.width = `${pct}%`;
+
+        if (dailyState.count >= dailyState.target) {
+          statusBadge.textContent = '🎉 Daily Cap Reached';
+          statusBadge.className = 'text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30';
+          adviceText.textContent = '🛡️ Daily quota reached! Pause here or wait 2+ hours before reviewing more to prevent platform action limits.';
+        } else if (dailyState.count >= dailyState.target * 0.8) {
+          statusBadge.textContent = '⚠️ Approaching Cap';
+          statusBadge.className = 'text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
+          adviceText.textContent = '💡 You are near today\'s safe target. Consider wrapping up this session soon.';
+        } else {
+          statusBadge.textContent = 'Optimal Safe Pace';
+          statusBadge.className = 'text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+          adviceText.textContent = '💡 Pacing advice: Space reviews across 2–3 short sessions today. Never rush.';
+        }
+      }
+
+      loadWhitelist();
+      loadDailyProgress();
+
+      // --- DOM Elements ---
+      const toggleGuideBtn = document.getElementById('toggleGuideBtn');
+      const guideContent = document.getElementById('guideContent');
+      const guideChevron = document.getElementById('guideChevron');
+
+      const dropZone = document.getElementById('dropZone');
+      const fileInput = document.getElementById('fileInput');
+      const browseBtn = document.getElementById('browseBtn');
+      const loadSampleBtn = document.getElementById('loadSampleBtn');
+
+      const alertContainer = document.getElementById('alertContainer');
+      const errorAlert = document.getElementById('errorAlert');
+      const errorMessage = document.getElementById('errorMessage');
+      const warningAlert = document.getElementById('warningAlert');
+      const warningMessage = document.getElementById('warningMessage');
+      const loadingIndicator = document.getElementById('loadingIndicator');
+      const loadingMessage = document.getElementById('loadingMessage');
+
+      const resultsDashboard = document.getElementById('resultsDashboard');
+      const statFollowing = document.getElementById('statFollowing');
+      const statFollowers = document.getElementById('statFollowers');
+      const statNotFollowing = document.getElementById('statNotFollowing');
+      const statWhitelisted = document.getElementById('statWhitelisted');
+      const displayedCount = document.getElementById('displayedCount');
+
+      const searchInput = document.getElementById('searchInput');
+      const sortSelect = document.getElementById('sortSelect');
+      const hideWhitelistedCheckbox = document.getElementById('hideWhitelistedCheckbox');
+      const copyListBtn = document.getElementById('copyListBtn');
+      const downloadCsvBtn = document.getElementById('downloadCsvBtn');
+      const resetAuditBtn = document.getElementById('resetAuditBtn');
+
+      const resultsTableBody = document.getElementById('resultsTableBody');
+      const noResultsState = document.getElementById('noResultsState');
+
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toastMessage');
+      const toastIcon = document.getElementById('toastIcon');
+
+      // High-Efficiency & Safety Elements
+      const dailyTargetSelect = document.getElementById('dailyTargetSelect');
+      const resetDailyBtn = document.getElementById('resetDailyBtn');
+      const startSpeedQueueBtn = document.getElementById('startSpeedQueueBtn');
+      const openBatch5Btn = document.getElementById('openBatch5Btn');
+      const mobileDeepLinkCheckbox = document.getElementById('mobileDeepLinkCheckbox');
+
+      const speedQueueModal = document.getElementById('speedQueueModal');
+      const closeSpeedQueueBtn = document.getElementById('closeSpeedQueueBtn');
+      const queueProgressBadge = document.getElementById('queueProgressBadge');
+      const queueAvatar = document.getElementById('queueAvatar');
+      const queueUsername = document.getElementById('queueUsername');
+      const queueFollowedDate = document.getElementById('queueFollowedDate');
+      const queueStatusBadges = document.getElementById('queueStatusBadges');
+      const queueOpenBtn = document.getElementById('queueOpenBtn');
+      const queueKeepBtn = document.getElementById('queueKeepBtn');
+      const queueSkipBtn = document.getElementById('queueSkipBtn');
+      const queuePrevBtn = document.getElementById('queuePrevBtn');
+
+      const safetyModal = document.getElementById('safetyModal');
+      const openSafetyModalBtn = document.getElementById('openSafetyModalBtn');
+      const closeSafetyModalBtn = document.getElementById('closeSafetyModalBtn');
+      const confirmSafetyModalBtn = document.getElementById('confirmSafetyModalBtn');
+
+      // Detect mobile device to default mobile deep linking
+      const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isMobileDevice) {
+        mobileDeepLinkCheckbox.checked = true;
+      }
+
+      // --- Toast Notification ---
+      let toastTimer = null;
+      function showToast(message, icon = '✓') {
+        if (toastTimer) clearTimeout(toastTimer);
+        toastMessage.textContent = message;
+        toastIcon.textContent = icon;
+        toast.classList.remove('translate-y-16', 'opacity-0', 'pointer-events-none');
+        toastTimer = setTimeout(() => {
+          toast.classList.add('translate-y-16', 'opacity-0', 'pointer-events-none');
+        }, 3200);
+      }
+
+      // --- Safety Modal Handlers ---
+      openSafetyModalBtn.addEventListener('click', () => {
+        safetyModal.classList.remove('hidden');
+      });
+      closeSafetyModalBtn.addEventListener('click', () => {
+        safetyModal.classList.add('hidden');
+      });
+      confirmSafetyModalBtn.addEventListener('click', () => {
+        safetyModal.classList.add('hidden');
+        showToast('Safe review habits active!', '🛡️');
+      });
+
+      // --- Daily Pacing Settings ---
+      dailyTargetSelect.addEventListener('change', (e) => {
+        dailyState.target = Number(e.target.value) || 50;
+        persistDailyProgress();
+        updateDailyPacingUI();
+        showToast(`Daily target set to ${dailyState.target} accounts`, '🎯');
+      });
+
+      resetDailyBtn.addEventListener('click', () => {
+        if (confirm('Reset today\'s reviewed count back to 0?')) {
+          dailyState.count = 0;
+          persistDailyProgress();
+          updateDailyPacingUI();
+          showToast('Today\'s count reset', '🔄');
+        }
+      });
+
+      // --- Guide Accordion Toggle ---
+      let guideExpanded = true;
+      toggleGuideBtn.addEventListener('click', () => {
+        guideExpanded = !guideExpanded;
+        if (guideExpanded) {
+          guideContent.classList.remove('hidden');
+          guideChevron.classList.remove('-rotate-90');
+        } else {
+          guideContent.classList.add('hidden');
+          guideChevron.classList.add('-rotate-90');
+        }
+        toggleGuideBtn.setAttribute('aria-expanded', String(guideExpanded));
+      });
+
+      // --- Alert Handlers ---
+      function showError(msg) {
+        alertContainer.classList.remove('hidden');
+        errorAlert.classList.remove('hidden');
+        errorMessage.textContent = msg;
+        loadingIndicator.classList.add('hidden');
+      }
+
+      function showWarning(msg) {
+        alertContainer.classList.remove('hidden');
+        warningAlert.classList.remove('hidden');
+        warningMessage.textContent = msg;
+      }
+
+      function showLoading(msg = 'Processing files safely in browser memory...') {
+        alertContainer.classList.remove('hidden');
+        loadingIndicator.classList.remove('hidden');
+        loadingMessage.textContent = msg;
+        errorAlert.classList.add('hidden');
+      }
+
+      function clearAlerts() {
+        alertContainer.classList.add('hidden');
+        errorAlert.classList.add('hidden');
+        warningAlert.classList.add('hidden');
+        loadingIndicator.classList.add('hidden');
+        errorMessage.textContent = '';
+        warningMessage.textContent = '';
+      }
+
+      // --- Recursive Schema-Resilient JSON Parser ---
+      function extractUserEntries(data) {
+        const entries = [];
+        const seen = new Set();
+
+        function traverse(obj) {
+          if (!obj || typeof obj !== 'object') return;
+
+          if (Array.isArray(obj)) {
+            for (let i = 0; i < obj.length; i++) {
+              traverse(obj[i]);
+            }
+            return;
+          }
+
+          if (Array.isArray(obj.string_list_data) && obj.string_list_data.length > 0) {
+            for (const sld of obj.string_list_data) {
+              const username = sld.value || obj.title || obj.value;
+              if (username && typeof username === 'string') {
+                const clean = username.trim();
+                const lower = clean.toLowerCase();
+                if (!seen.has(lower) && !clean.startsWith('#')) {
+                  seen.add(lower);
+                  const validHref = (typeof sld.href === 'string' && sld.href.startsWith('https://'))
+                    ? sld.href
+                    : `https://www.instagram.com/${encodeURIComponent(clean)}`;
+                  const ts = typeof sld.timestamp === 'number' ? sld.timestamp : (typeof obj.timestamp === 'number' ? obj.timestamp : 0);
+                  entries.push({
+                    username: lower,
+                    displayUsername: clean,
+                    href: validHref,
+                    timestamp: ts
+                  });
+                }
+              }
+            }
+          } else if (obj.value && typeof obj.value === 'string' && (obj.href || obj.timestamp !== undefined)) {
+            const clean = obj.value.trim();
+            const lower = clean.toLowerCase();
+            if (!seen.has(lower) && !clean.startsWith('#')) {
+              seen.add(lower);
+              const validHref = (typeof obj.href === 'string' && obj.href.startsWith('https://'))
+                ? obj.href
+                : `https://www.instagram.com/${encodeURIComponent(clean)}`;
+              entries.push({
+                username: lower,
+                displayUsername: clean,
+                href: validHref,
+                timestamp: typeof obj.timestamp === 'number' ? obj.timestamp : 0
+              });
+            }
+          }
+
+          for (const key of Object.keys(obj)) {
+            if (key !== 'string_list_data') {
+              traverse(obj[key]);
+            }
+          }
+        }
+
+        traverse(data);
+        return entries;
+      }
+
+      // --- Archive & JSON Processor ---
+      async function processUploadedFiles(files) {
+        clearAlerts();
+        showLoading('Inspecting uploaded files...');
+
+        const zipFiles = [];
+        const jsonFiles = [];
+
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const name = file.name.toLowerCase();
+          if (name.endsWith('.zip')) {
+            zipFiles.push(file);
+          } else if (name.endsWith('.json')) {
+            jsonFiles.push(file);
+          }
+        }
+
+        if (zipFiles.length === 0 && jsonFiles.length === 0) {
+          showError('Please upload either a .zip export archive or raw .json files (followers_*.json and following.json).');
+          return;
+        }
+
+        try {
+          if (zipFiles.length > 0) {
+            await handleZipFile(zipFiles[0]);
+          } else {
+            await handleRawJsonFiles(jsonFiles);
+          }
+        } catch (err) {
+          console.error(err);
+          showError('Failed to parse files: ' + (err.message || 'Unknown parsing error.'));
+        }
+      }
+
+      // Handle .ZIP Archive with JSZip
+      async function handleZipFile(zipFile) {
+        const sizeMb = zipFile.size / (1024 * 1024);
+        if (sizeMb > 50) {
+          showWarning(`Archive size is ${sizeMb.toFixed(1)} MB. You may have included media/photos in your export. Processing may take a few moments.`);
+        }
+
+        showLoading('Decompressing archive in memory...');
+        if (typeof JSZip === 'undefined') {
+          showError('JSZip library failed to load. Please check your internet connection or reload the page.');
+          return;
+        }
+
+        const zip = new JSZip();
+        let loadedZip;
+        try {
+          loadedZip = await zip.loadAsync(zipFile);
+        } catch (e) {
+          showError('Could not read the ZIP file. Please ensure the file is not corrupted.');
+          return;
+        }
+
+        let hasHtml = false;
+        let followingFile = null;
+        const followerFiles = [];
+
+        loadedZip.forEach((relativePath, fileObj) => {
+          if (fileObj.dir) return;
+          const lower = relativePath.replace(/\\/g, '/').toLowerCase();
+          const fileName = lower.split('/').pop();
+
+          if (fileName.endsWith('.html') || fileName.endsWith('.htm')) {
+            if (fileName.includes('follower') || fileName.includes('following')) {
+              hasHtml = true;
+            }
+          }
+
+          if (
+            fileName.includes('hashtag') || 
+            fileName.includes('pending_follow_requests') || 
+            fileName.includes('recently_unfollowed')
+          ) {
+            return;
+          }
+
+          if (fileName === 'following.json' || fileName === 'following') {
+            followingFile = fileObj;
+          }
+
+          if (fileName.startsWith('followers') && fileName.endsWith('.json')) {
+            followerFiles.push(fileObj);
+          }
+        });
+
+        if (hasHtml) {
+          showError('HTML export format detected! Meta exported this archive in HTML format. Mutuals Audit requires JSON. Please request a new export from Accounts Center and choose "Format: JSON".');
+          return;
+        }
+
+        if (!followingFile) {
+          showError('Could not find "following.json" in the ZIP archive. Please ensure you exported "Followers and following".');
+          return;
+        }
+
+        if (followerFiles.length === 0) {
+          showError('Could not find any "followers_*.json" files in the ZIP archive. Please ensure you exported "Followers and following".');
+          return;
+        }
+
+        showLoading('Parsing following data...');
+        const followingText = await followingFile.async('text');
+        const followingJson = JSON.parse(followingText);
+        followingUsers = extractUserEntries(followingJson);
+
+        showLoading(`Parsing ${followerFiles.length} follower file(s)...`);
+        followerSet = new Set();
+        for (const fFile of followerFiles) {
+          const followerText = await fFile.async('text');
+          const followerJson = JSON.parse(followerText);
+          const entries = extractUserEntries(followerJson);
+          for (const entry of entries) {
+            followerSet.add(entry.username);
+          }
+        }
+
+        finalizeAudit();
+      }
+
+      // Handle raw .JSON files dropped/selected
+      async function handleRawJsonFiles(jsonFileList) {
+        showLoading('Parsing raw JSON files...');
+        let followingData = null;
+        followerSet = new Set();
+
+        for (const file of jsonFileList) {
+          const lower = file.name.toLowerCase();
+          
+          if (
+            lower.includes('hashtag') || 
+            lower.includes('pending_follow_requests') || 
+            lower.includes('recently_unfollowed')
+          ) {
+            continue;
+          }
+
+          const text = await file.text();
+          let json;
+          try {
+            json = JSON.parse(text);
+          } catch (e) {
+            continue;
+          }
+
+          if (lower.startsWith('following') && lower.endsWith('.json')) {
+            followingData = json;
+          } else if (lower.startsWith('follower') && lower.endsWith('.json')) {
+            const entries = extractUserEntries(json);
+            for (const entry of entries) {
+              followerSet.add(entry.username);
+            }
+          }
+        }
+
+        if (!followingData) {
+          showError('Missing "following.json". Please drop both following.json and followers_*.json.');
+          return;
+        }
+
+        if (followerSet.size === 0) {
+          showError('No followers found in the uploaded JSON files. Please include your followers_*.json file(s).');
+          return;
+        }
+
+        followingUsers = extractUserEntries(followingData);
+        finalizeAudit();
+      }
+
+      // --- Finalize Audit Computation ---
+      function finalizeAudit() {
+        loadingIndicator.classList.add('hidden');
+
+        nonMutuals = [];
+        for (const f of followingUsers) {
+          if (!followerSet.has(f.username)) {
+            nonMutuals.push({
+              username: f.username,
+              displayUsername: f.displayUsername,
+              href: f.href,
+              timestamp: f.timestamp,
+              whitelisted: whitelistedSet.has(f.username),
+              checked: checkedSessionSet.has(f.username)
+            });
+          }
+        }
+
+        if (guideExpanded) {
+          guideExpanded = false;
+          guideContent.classList.add('hidden');
+          guideChevron.classList.add('-rotate-90');
+          toggleGuideBtn.setAttribute('aria-expanded', 'false');
+        }
+
+        statFollowing.textContent = followingUsers.length.toLocaleString();
+        statFollowers.textContent = followerSet.size.toLocaleString();
+        statNotFollowing.textContent = nonMutuals.length.toLocaleString();
+        updateWhitelistStat();
+        updateDailyPacingUI();
+
+        resultsDashboard.classList.remove('hidden');
+        renderTable();
+        showToast(`Audit complete: Found ${nonMutuals.length} non-mutual accounts!`, '🎉');
+      }
+
+      function updateWhitelistStat() {
+        const count = nonMutuals.filter(u => whitelistedSet.has(u.username)).length;
+        statWhitelisted.textContent = count.toLocaleString();
+      }
+
+      function getEffectiveTargetUrl(user) {
+        const useApp = mobileDeepLinkCheckbox.checked;
+        if (useApp) {
+          return `instagram://user?username=${encodeURIComponent(user.displayUsername)}`;
+        }
+        if (user.href && user.href.startsWith('https://')) {
+          return user.href;
+        }
+        return `https://www.instagram.com/${encodeURIComponent(user.displayUsername)}`;
+      }
+
+      // --- Table Rendering (Strictly XSS Safe via textContent) ---
+      function getFilteredList() {
+        const query = searchInput.value.trim().toLowerCase();
+        const sortVal = sortSelect.value;
+        const hideWhitelisted = hideWhitelistedCheckbox.checked;
+
+        let filtered = nonMutuals.slice();
+
+        if (hideWhitelisted) {
+          filtered = filtered.filter(u => !whitelistedSet.has(u.username));
+        }
+
+        if (query) {
+          filtered = filtered.filter(u => u.displayUsername.toLowerCase().includes(query));
+        }
+
+        filtered.sort((a, b) => {
+          if (sortVal === 'date-desc') return b.timestamp - a.timestamp;
+          if (sortVal === 'date-asc') return a.timestamp - b.timestamp;
+          if (sortVal === 'alpha-asc') return a.displayUsername.localeCompare(b.displayUsername);
+          if (sortVal === 'alpha-desc') return b.displayUsername.localeCompare(a.displayUsername);
+          return 0;
+        });
+
+        return filtered;
+      }
+
+      function renderTable() {
+        const filtered = getFilteredList();
+        queueFilteredList = filtered; // synchronize for Speed Queue
+
+        displayedCount.textContent = filtered.length.toLocaleString();
+
+        while (resultsTableBody.firstChild) {
+          resultsTableBody.removeChild(resultsTableBody.firstChild);
+        }
+
+        if (filtered.length === 0) {
+          noResultsState.classList.remove('hidden');
+          return;
+        }
+        noResultsState.classList.add('hidden');
+
+        const fragment = document.createDocumentFragment();
+
+        filtered.forEach((user, index) => {
+          const tr = document.createElement('tr');
+          const isWhitelisted = whitelistedSet.has(user.username);
+          const isChecked = checkedSessionSet.has(user.username);
+
+          tr.className = `transition-colors hover:bg-slate-800/40 ${isChecked ? 'opacity-60 bg-slate-950/40' : ''}`;
+
+          // Index Col
+          const tdIndex = document.createElement('td');
+          tdIndex.className = 'py-3.5 px-4 text-center text-xs text-slate-500 font-mono';
+          tdIndex.textContent = String(index + 1);
+          tr.appendChild(tdIndex);
+
+          // User Col (Avatar Initials + Username)
+          const tdUser = document.createElement('td');
+          tdUser.className = 'py-3.5 px-4';
+          const userWrapper = document.createElement('div');
+          userWrapper.className = 'flex items-center gap-3';
+
+          const avatar = document.createElement('div');
+          const initial = user.displayUsername.charAt(0).toUpperCase() || '?';
+          const colorClass = getAvatarColor(user.username);
+          avatar.className = `w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs text-white ${colorClass}`;
+          avatar.textContent = initial;
+
+          const nameWrapper = document.createElement('div');
+          nameWrapper.className = 'flex flex-col';
+
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'font-semibold text-slate-100 flex items-center gap-1.5';
+          nameSpan.textContent = user.displayUsername;
+
+          nameWrapper.appendChild(nameSpan);
+          userWrapper.appendChild(avatar);
+          userWrapper.appendChild(nameWrapper);
+          tdUser.appendChild(userWrapper);
+          tr.appendChild(tdUser);
+
+          // Followed Date Col
+          const tdDate = document.createElement('td');
+          tdDate.className = 'py-3.5 px-4 hidden sm:table-cell text-xs text-slate-400';
+          tdDate.textContent = formatDate(user.timestamp);
+          tr.appendChild(tdDate);
+
+          // Status Badges Col
+          const tdStatus = document.createElement('td');
+          tdStatus.className = 'py-3.5 px-4 text-center';
+          const badgeWrapper = document.createElement('div');
+          badgeWrapper.className = 'flex items-center justify-center gap-1.5 flex-wrap';
+
+          if (isWhitelisted) {
+            const whiteBadge = document.createElement('span');
+            whiteBadge.className = 'text-[11px] font-medium bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1';
+            whiteBadge.textContent = '★ Kept';
+            badgeWrapper.appendChild(whiteBadge);
+          } else {
+            const notMutualBadge = document.createElement('span');
+            notMutualBadge.className = 'text-[11px] font-medium bg-rose-500/10 text-rose-300 border border-rose-500/20 px-2 py-0.5 rounded-full';
+            notMutualBadge.textContent = 'Not Following Back';
+            badgeWrapper.appendChild(notMutualBadge);
+          }
+
+          if (isChecked) {
+            const checkedBadge = document.createElement('span');
+            checkedBadge.className = 'text-[10px] font-medium bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded';
+            checkedBadge.textContent = 'Reviewed';
+            badgeWrapper.appendChild(checkedBadge);
+          }
+
+          tdStatus.appendChild(badgeWrapper);
+          tr.appendChild(tdStatus);
+
+          // Action Buttons Col
+          const tdActions = document.createElement('td');
+          tdActions.className = 'py-3.5 px-4 text-right';
+          const actionsWrapper = document.createElement('div');
+          actionsWrapper.className = 'flex items-center justify-end gap-2';
+
+          const keepBtn = document.createElement('button');
+          keepBtn.type = 'button';
+          keepBtn.className = `p-1.5 rounded-lg border transition-all text-xs flex items-center gap-1 ${
+            isWhitelisted 
+              ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30' 
+              : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+          }`;
+          keepBtn.title = isWhitelisted ? 'Remove from whitelist' : 'Keep on follow list (whitelist)';
+          keepBtn.textContent = isWhitelisted ? '★ Kept' : '☆ Keep';
+          keepBtn.addEventListener('click', () => {
+            toggleWhitelist(user.username);
+          });
+
+          const profileLink = document.createElement('a');
+          profileLink.className = 'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 text-xs font-medium transition-colors';
+          profileLink.target = '_blank';
+          profileLink.rel = 'noopener noreferrer';
+          profileLink.href = getEffectiveTargetUrl(user);
+          
+          profileLink.textContent = mobileDeepLinkCheckbox.checked ? 'Open App ↗' : 'View Profile ↗';
+          profileLink.addEventListener('click', () => {
+            if (!checkedSessionSet.has(user.username)) {
+              checkedSessionSet.add(user.username);
+              incrementDailyProgress(1);
+            }
+            tr.classList.add('opacity-60', 'bg-slate-950/40');
+            renderTable();
+          });
+
+          actionsWrapper.appendChild(keepBtn);
+          actionsWrapper.appendChild(profileLink);
+          tdActions.appendChild(actionsWrapper);
+          tr.appendChild(tdActions);
+
+          fragment.appendChild(tr);
+        });
+
+        resultsTableBody.appendChild(fragment);
+      }
+
+      function toggleWhitelist(username) {
+        const lower = username.toLowerCase();
+        if (whitelistedSet.has(lower)) {
+          whitelistedSet.delete(lower);
+          showToast(`Removed @${lower} from Kept list`);
+        } else {
+          whitelistedSet.add(lower);
+          showToast(`Saved @${lower} to Kept list (persisted)`, '★');
+        }
+        persistWhitelist();
+        updateWhitelistStat();
+        renderTable();
+      }
+
+      // --- SPEED REVIEW QUEUE (FOCUS MODE) LOGIC ---
+      function openSpeedQueue() {
+        queueFilteredList = getFilteredList().filter(u => !whitelistedSet.has(u.username));
+        if (queueFilteredList.length === 0) {
+          showToast('No unkept accounts left to review in queue!', '🎉');
+          return;
+        }
+
+        // Pick first unreviewed account
+        const firstUnchecked = queueFilteredList.findIndex(u => !checkedSessionSet.has(u.username));
+        currentQueueIndex = firstUnchecked !== -1 ? firstUnchecked : 0;
+
+        isSpeedQueueOpen = true;
+        speedQueueModal.classList.remove('hidden');
+        renderSpeedQueueItem();
+      }
+
+      function closeSpeedQueue() {
+        isSpeedQueueOpen = false;
+        speedQueueModal.classList.add('hidden');
+        renderTable();
+      }
+
+      function renderSpeedQueueItem() {
+        if (currentQueueIndex >= queueFilteredList.length) {
+          // Finished queue!
+          showToast('Queue completed! Great job.', '🎉');
+          closeSpeedQueue();
+          return;
+        }
+
+        const user = queueFilteredList[currentQueueIndex];
+        const isWhitelisted = whitelistedSet.has(user.username);
+        const isChecked = checkedSessionSet.has(user.username);
+
+        queueProgressBadge.textContent = `${currentQueueIndex + 1} of ${queueFilteredList.length}`;
+        queueUsername.textContent = `@${user.displayUsername}`;
+        queueFollowedDate.textContent = `Followed on: ${formatDate(user.timestamp)}`;
+
+        // Avatar
+        queueAvatar.textContent = user.displayUsername.charAt(0).toUpperCase();
+        queueAvatar.className = `w-20 h-20 mx-auto rounded-full flex items-center justify-center font-bold text-2xl text-white shadow-xl ${getAvatarColor(user.username)}`;
+
+        // Status Badges
+        while (queueStatusBadges.firstChild) {
+          queueStatusBadges.removeChild(queueStatusBadges.firstChild);
+        }
+
+        if (isWhitelisted) {
+          const wb = document.createElement('span');
+          wb.className = 'text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-medium';
+          wb.textContent = '★ Kept (Whitelisted)';
+          queueStatusBadges.appendChild(wb);
+        } else {
+          const nb = document.createElement('span');
+          nb.className = 'text-xs bg-rose-500/10 text-rose-300 border border-rose-500/20 px-2.5 py-0.5 rounded-full font-medium';
+          nb.textContent = 'Not Following Back';
+          queueStatusBadges.appendChild(nb);
+        }
+
+        if (isChecked) {
+          const cb = document.createElement('span');
+          cb.className = 'text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-medium';
+          cb.textContent = 'Reviewed';
+          queueStatusBadges.appendChild(cb);
+        }
+
+        queueKeepBtn.textContent = isWhitelisted ? '★ Kept' : '☆ Keep / Whitelist';
+      }
+
+      function handleQueueOpenAndNext() {
+        if (currentQueueIndex >= queueFilteredList.length) return;
+        const user = queueFilteredList[currentQueueIndex];
+
+        // Open profile
+        const url = getEffectiveTargetUrl(user);
+        window.open(url, '_blank', 'noopener,noreferrer');
+
+        // Mark checked
+        if (!checkedSessionSet.has(user.username)) {
+          checkedSessionSet.add(user.username);
+          incrementDailyProgress(1);
+        }
+
+        // Advance
+        currentQueueIndex++;
+        renderSpeedQueueItem();
+      }
+
+      function handleQueueKeep() {
+        if (currentQueueIndex >= queueFilteredList.length) return;
+        const user = queueFilteredList[currentQueueIndex];
+        toggleWhitelist(user.username);
+        currentQueueIndex++;
+        renderSpeedQueueItem();
+      }
+
+      function handleQueueSkip() {
+        if (currentQueueIndex < queueFilteredList.length - 1) {
+          currentQueueIndex++;
+          renderSpeedQueueItem();
+        } else {
+          showToast('End of queue reached', 'ℹ️');
+        }
+      }
+
+      function handleQueuePrev() {
+        if (currentQueueIndex > 0) {
+          currentQueueIndex--;
+          renderSpeedQueueItem();
+        }
+      }
+
+      // Speed Queue Event Listeners
+      startSpeedQueueBtn.addEventListener('click', openSpeedQueue);
+      closeSpeedQueueBtn.addEventListener('click', closeSpeedQueue);
+      queueOpenBtn.addEventListener('click', handleQueueOpenAndNext);
+      queueKeepBtn.addEventListener('click', handleQueueKeep);
+      queueSkipBtn.addEventListener('click', handleQueueSkip);
+      queuePrevBtn.addEventListener('click', handleQueuePrev);
+
+      // Keyboard navigation for Speed Queue Focus Mode
+      window.addEventListener('keydown', (e) => {
+        if (!isSpeedQueueOpen) return;
+
+        // Space or Enter -> Open and Advance
+        if (e.code === 'Space' || e.key === 'Enter') {
+          e.preventDefault();
+          handleQueueOpenAndNext();
+        } else if (e.key === 'k' || e.key === 'K') {
+          e.preventDefault();
+          handleQueueKeep();
+        } else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          handleQueueSkip();
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          handleQueuePrev();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          closeSpeedQueue();
+        }
+      });
+
+      // --- OPEN BATCH OF 5 MULTI-TAB LAUNCHER ---
+      openBatch5Btn.addEventListener('click', () => {
+        const unreviewed = getFilteredList().filter(u => !whitelistedSet.has(u.username) && !checkedSessionSet.has(u.username));
+
+        if (unreviewed.length === 0) {
+          showToast('No unreviewed accounts left in this view!', '🎉');
+          return;
+        }
+
+        const batch = unreviewed.slice(0, 5);
+        let openedCount = 0;
+
+        batch.forEach(user => {
+          const url = getEffectiveTargetUrl(user);
+          const win = window.open(url, '_blank');
+          if (win) {
+            openedCount++;
+            checkedSessionSet.add(user.username);
+          }
+        });
+
+        if (openedCount > 0) {
+          incrementDailyProgress(openedCount);
+          renderTable();
+          showToast(`Opened ${openedCount} profiles! Unfollow on each tab, then close with Ctrl+W.`, '🚀');
+        } else {
+          showWarning('Browser blocked multi-tabs. Please click the popup icon in your address bar and select "Always allow popups" to use Batch Open.');
+        }
+      });
+
+      // --- Helper Utilities ---
+      function formatDate(ts) {
+        if (!ts) return 'Unknown';
+        try {
+          const d = new Date(ts * 1000);
+          return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (e) {
+          return 'Unknown';
+        }
+      }
+
+      const avatarColors = [
+        'bg-rose-600', 'bg-pink-600', 'bg-purple-600', 'bg-indigo-600',
+        'bg-blue-600', 'bg-cyan-600', 'bg-teal-600', 'bg-emerald-600',
+        'bg-amber-600', 'bg-orange-600'
+      ];
+      function getAvatarColor(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+          hash = (hash << 5) - hash + str.charCodeAt(i);
+          hash |= 0;
+        }
+        return avatarColors[Math.abs(hash) % avatarColors.length];
+      }
+
+      // --- Event Listeners for Filters ---
+      searchInput.addEventListener('input', renderTable);
+      sortSelect.addEventListener('change', renderTable);
+      hideWhitelistedCheckbox.addEventListener('change', renderTable);
+      mobileDeepLinkCheckbox.addEventListener('change', renderTable);
+
+      // Copy Usernames to Clipboard
+      copyListBtn.addEventListener('click', () => {
+        const hideWhitelisted = hideWhitelistedCheckbox.checked;
+        let list = nonMutuals;
+        if (hideWhitelisted) {
+          list = list.filter(u => !whitelistedSet.has(u.username));
+        }
+        if (list.length === 0) {
+          showToast('No usernames to copy', 'ℹ️');
+          return;
+        }
+        const text = list.map(u => u.displayUsername).join('\n');
+        navigator.clipboard.writeText(text).then(() => {
+          showToast(`Copied ${list.length} usernames to clipboard!`, '📋');
+        }).catch(err => {
+          showError('Failed to copy to clipboard: ' + err.message);
+        });
+      });
+
+      // Export CSV
+      downloadCsvBtn.addEventListener('click', () => {
+        if (nonMutuals.length === 0) {
+          showToast('No data to export', 'ℹ️');
+          return;
+        }
+        const rows = [
+          ['Username', 'Profile URL', 'Followed Date', 'Whitelisted', 'Reviewed Session']
+        ];
+        for (const u of nonMutuals) {
+          rows.push([
+            `"${u.displayUsername.replace(/"/g, '""')}"`,
+            `"${u.href.replace(/"/g, '""')}"`,
+            `"${formatDate(u.timestamp)}"`,
+            whitelistedSet.has(u.username) ? 'YES' : 'NO',
+            checkedSessionSet.has(u.username) ? 'YES' : 'NO'
+          ]);
+        }
+        const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        const today = new Date().toISOString().split('T')[0];
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `mutuals-audit-${today}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('CSV downloaded successfully!', '💾');
+      });
+
+      // Reset Audit
+      resetAuditBtn.addEventListener('click', () => {
+        if (confirm('Clear the current audit results to upload another export? (Your whitelist and daily progress will remain saved)')) {
+          followingUsers = [];
+          followerSet = new Set();
+          nonMutuals = [];
+          checkedSessionSet = new Set();
+          resultsDashboard.classList.add('hidden');
+          clearAlerts();
+          fileInput.value = '';
+          showToast('Ready for new export file');
+        }
+      });
+
+      // --- Drag & Drop Handling ---
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.add('border-indigo-500', 'bg-indigo-500/10');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.remove('border-indigo-500', 'bg-indigo-500/10');
+        });
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        if (dt && dt.files && dt.files.length > 0) {
+          processUploadedFiles(dt.files);
+        }
+      });
+
+      browseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fileInput.click();
+      });
+
+      dropZone.addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+          processUploadedFiles(e.target.files);
+        }
+      });
+
+      // --- Instant Sample Data Demo ---
+      loadSampleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        clearAlerts();
+        showLoading('Loading sample follower data...');
+
+        setTimeout(() => {
+          const sampleFollowing = [
+            { username: "alex_runner", displayUsername: "alex_runner", href: "https://www.instagram.com/alex_runner", timestamp: 1700100000 },
+            { username: "maya_designs", displayUsername: "maya_designs", href: "https://www.instagram.com/maya_designs", timestamp: 1699500000 },
+            { username: "tech_insider_daily", displayUsername: "tech_insider_daily", href: "https://www.instagram.com/tech_insider_daily", timestamp: 1698000000 },
+            { username: "urban_coffee_roasters", displayUsername: "urban_coffee_roasters", href: "https://www.instagram.com/urban_coffee_roasters", timestamp: 1695000000 },
+            { username: "dr_sarah_chen", displayUsername: "dr_sarah_chen", href: "https://www.instagram.com/dr_sarah_chen", timestamp: 1692000000 },
+            { username: "natgeo_wildlife", displayUsername: "natgeo_wildlife", href: "https://www.instagram.com/natgeo_wildlife", timestamp: 1689000000 },
+            { username: "jordan_fitness_coach", displayUsername: "jordan_fitness_coach", href: "https://www.instagram.com/jordan_fitness_coach", timestamp: 1687000000 },
+            { username: "minimalist_architecture", displayUsername: "minimalist_architecture", href: "https://www.instagram.com/minimalist_architecture", timestamp: 1685000000 },
+            { username: "sam_music_prod", displayUsername: "sam_music_prod", href: "https://www.instagram.com/sam_music_prod", timestamp: 1682000000 },
+            { username: "daily_recipe_ideas", displayUsername: "daily_recipe_ideas", href: "https://www.instagram.com/daily_recipe_ideas", timestamp: 1680000000 },
+            { username: "chris_photography", displayUsername: "chris_photography", href: "https://www.instagram.com/chris_photography", timestamp: 1678000000 },
+            { username: "eva_wanderlust", displayUsername: "eva_wanderlust", href: "https://www.instagram.com/eva_wanderlust", timestamp: 1675000000 },
+            { username: "pixel_art_studios", displayUsername: "pixel_art_studios", href: "https://www.instagram.com/pixel_art_studios", timestamp: 1672000000 },
+            { username: "leo_the_corgi", displayUsername: "leo_the_corgi", href: "https://www.instagram.com/leo_the_corgi", timestamp: 1670000000 },
+            { username: "nordic_home_decor", displayUsername: "nordic_home_decor", href: "https://www.instagram.com/nordic_home_decor", timestamp: 1668000000 }
+          ];
+
+          const sampleFollowers = new Set([
+            "alex_runner",
+            "maya_designs",
+            "dr_sarah_chen",
+            "sam_music_prod",
+            "chris_photography",
+            "eva_wanderlust",
+            "leo_the_corgi",
+            "pixel_art_studios",
+            "stranger_in_the_fog",
+            "another_follower_only"
+          ]);
+
+          followingUsers = sampleFollowing;
+          followerSet = sampleFollowers;
+          finalizeAudit();
+          showToast('Sample dataset loaded! Explore features below.', '🚀');
+        }, 300);
+      });
+
+    })();
+  </script>
+</body>
+</html>
