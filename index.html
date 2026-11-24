@@ -109,6 +109,27 @@
   <!-- Main Container -->
   <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
+    <!-- Active Audit Session Bar (Shows when previous session is restored) -->
+    <div id="activeAuditSessionBar" class="hidden p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-sm">
+          📂
+        </div>
+        <div>
+          <span class="text-xs font-bold text-indigo-300 uppercase tracking-wider">Active Audit Restored</span>
+          <p id="activeAuditSessionDetails" class="text-xs text-slate-300">Resumed your saved audit. Unfollowed accounts are automatically tracked and hidden.</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 self-end sm:self-center">
+        <button type="button" id="toggleUploadZoneBtn" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs text-slate-300 hover:text-white transition-colors">
+          Upload New Export
+        </button>
+        <button type="button" id="clearAuditDataBtn" class="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-xs text-rose-300 transition-colors">
+          Clear Saved Audit
+        </button>
+      </div>
+    </div>
+
     <!-- Collapsible Verified Step-by-Step Export Guide -->
     <section class="border border-slate-800 bg-slate-900/60 rounded-2xl overflow-hidden shadow-sm">
       <button id="toggleGuideBtn" class="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-slate-800/40 transition-colors" aria-expanded="true">
@@ -144,7 +165,6 @@
                 Open your app or web profile &rarr; Menu (<span class="font-mono">☰</span>) &rarr; <strong class="text-white">Settings and privacy</strong> &rarr; <strong class="text-white">Accounts Center</strong> &rarr; <strong class="text-white">Your information and permissions</strong>.
               </p>
             </div>
-            <!-- Screenshot Slot / Container -->
             <div class="step-screenshot-container border border-dashed border-slate-800 rounded-lg p-2.5 bg-slate-900/40 text-center">
               <div class="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 font-mono">
                 <svg class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -283,9 +303,9 @@
           </div>
 
           <div class="text-[11px] text-slate-500 pt-2 flex items-center justify-center gap-4">
-            <span>✓ Multi-part follower files supported</span>
+            <span>✓ Auto-saved in browser</span>
             <span>•</span>
-            <span>✓ Zero data uploaded</span>
+            <span>✓ Zero re-uploading needed across days</span>
           </div>
         </div>
       </div>
@@ -322,47 +342,59 @@
     <!-- Results Dashboard (Hidden until data parsed) -->
     <div id="resultsDashboard" class="hidden space-y-6">
 
-      <!-- Summary Metrics Cards -->
-      <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Summary Metrics Cards (5-Card Multi-Day Progress Grid) -->
+      <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <!-- Following -->
-        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
-          <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Following</span>
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
+          <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Following</span>
           <div class="mt-2 flex items-baseline justify-between">
-            <span id="statFollowing" class="text-3xl font-extrabold text-white">0</span>
-            <span class="text-xs text-slate-500">Accounts you follow</span>
+            <span id="statFollowing" class="text-2xl sm:text-3xl font-extrabold text-white">0</span>
+            <span class="text-[10px] text-slate-500">You follow</span>
           </div>
         </div>
 
         <!-- Followers -->
-        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
-          <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Followers</span>
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
+          <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Followers</span>
           <div class="mt-2 flex items-baseline justify-between">
-            <span id="statFollowers" class="text-3xl font-extrabold text-white">0</span>
-            <span class="text-xs text-slate-500">Accounts following you</span>
+            <span id="statFollowers" class="text-2xl sm:text-3xl font-extrabold text-white">0</span>
+            <span class="text-[10px] text-slate-500">Following you</span>
           </div>
         </div>
 
-        <!-- Not Following Back (Highlight) -->
-        <div class="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-5 flex flex-col justify-between shadow-lg shadow-rose-950/20">
+        <!-- Remaining to Review (Highlight) -->
+        <div class="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 flex flex-col justify-between shadow-lg shadow-rose-950/20 col-span-2 sm:col-span-1">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold text-rose-300 uppercase tracking-wider">Not Following Back</span>
-            <span class="text-[10px] font-bold bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full">Review List</span>
+            <span class="text-xs font-semibold text-rose-300 uppercase tracking-wider">Remaining</span>
+            <span class="text-[10px] font-bold bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full">Pending</span>
           </div>
           <div class="mt-2 flex items-baseline justify-between">
-            <span id="statNotFollowing" class="text-3xl font-extrabold text-rose-400">0</span>
-            <span class="text-xs text-rose-300/70">Non-mutual follows</span>
+            <span id="statRemaining" class="text-2xl sm:text-3xl font-extrabold text-rose-400">0</span>
+            <span class="text-[10px] text-rose-300/70">To review</span>
+          </div>
+        </div>
+
+        <!-- Unfollowed (Completed Across Days) -->
+        <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 flex flex-col justify-between shadow-lg shadow-emerald-950/20">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-emerald-300 uppercase tracking-wider">Unfollowed</span>
+            <span class="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">✓ Done</span>
+          </div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="statUnfollowed" class="text-2xl sm:text-3xl font-extrabold text-emerald-400">0</span>
+            <span class="text-[10px] text-emerald-300/70">Completed</span>
           </div>
         </div>
 
         <!-- Kept / Whitelisted -->
-        <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex flex-col justify-between shadow-lg shadow-amber-950/20">
+        <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col justify-between shadow-lg shadow-amber-950/20">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold text-amber-300 uppercase tracking-wider">Kept (Whitelisted)</span>
+            <span class="text-xs font-semibold text-amber-300 uppercase tracking-wider">Kept (Whitelist)</span>
             <span class="text-[10px] font-bold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">Saved</span>
           </div>
           <div class="mt-2 flex items-baseline justify-between">
-            <span id="statWhitelisted" class="text-3xl font-extrabold text-amber-400">0</span>
-            <span class="text-xs text-amber-300/70">Intentional follows</span>
+            <span id="statWhitelisted" class="text-2xl sm:text-3xl font-extrabold text-amber-400">0</span>
+            <span class="text-[10px] text-amber-300/70">Intentional</span>
           </div>
         </div>
       </section>
@@ -417,7 +449,7 @@
       <section class="bg-indigo-950/30 border border-indigo-500/20 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div class="space-y-0.5">
           <span class="text-xs uppercase font-bold text-indigo-400 tracking-wider">Fast &amp; Safe Review Tools</span>
-          <p class="text-xs text-slate-300">Cut manual review time by 80% without triggering platform automation filters.</p>
+          <p class="text-xs text-slate-300">Resume reviewing right where you left off. Unfollowed accounts vanish from your queue.</p>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
@@ -429,7 +461,7 @@
             title="Open focus review queue with Spacebar navigation"
           >
             <span class="text-sm">⚡</span>
-            <span>Speed Review Queue</span>
+            <span>Resume Speed Queue</span>
             <span class="text-[10px] font-mono bg-black/30 px-1.5 py-0.5 rounded text-indigo-200">Spacebar</span>
           </button>
 
@@ -438,7 +470,7 @@
             type="button" 
             id="openBatch5Btn"
             class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-all flex items-center gap-1.5"
-            title="Opens next 5 profiles in background tabs at once. Unfollow on each and close with Ctrl+W."
+            title="Opens next 5 pending profiles in background tabs at once. Unfollow on each and close with Ctrl+W."
           >
             <span>🚀</span>
             <span>Open Batch of 5</span>
@@ -485,11 +517,17 @@
           </select>
         </div>
 
-        <!-- Whitelist Toggle & Action Buttons -->
+        <!-- Filters & Action Buttons -->
         <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-          <!-- Toggle Whitelisted Accounts -->
-          <label class="flex items-center gap-2 cursor-pointer bg-slate-950 px-3.5 py-2 rounded-xl border border-slate-800 text-xs text-slate-300 hover:border-slate-700 select-none">
-            <input type="checkbox" id="hideWhitelistedCheckbox" class="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500">
+          <!-- Hide Unfollowed Checkbox (Default ON) -->
+          <label class="flex items-center gap-1.5 cursor-pointer bg-slate-950 px-3 py-2 rounded-xl border border-slate-800 text-xs text-slate-300 hover:border-slate-700 select-none" title="Hide accounts you've already unfollowed so they don't clutter your daily view">
+            <input type="checkbox" id="hideUnfollowedCheckbox" checked class="rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-emerald-500">
+            <span>Hide Unfollowed</span>
+          </label>
+
+          <!-- Toggle Whitelisted Accounts (Default ON) -->
+          <label class="flex items-center gap-1.5 cursor-pointer bg-slate-950 px-3 py-2 rounded-xl border border-slate-800 text-xs text-slate-300 hover:border-slate-700 select-none">
+            <input type="checkbox" id="hideWhitelistedCheckbox" checked class="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500">
             <span>Hide Kept</span>
           </label>
 
@@ -497,13 +535,13 @@
           <button 
             type="button" 
             id="copyListBtn" 
-            class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-colors flex items-center gap-1.5"
-            title="Copy non-mutual usernames to clipboard"
+            class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-colors flex items-center gap-1.5"
+            title="Copy pending usernames to clipboard"
           >
             <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
             </svg>
-            <span>Copy Usernames</span>
+            <span>Copy</span>
           </button>
 
           <!-- Download CSV Button -->
@@ -515,19 +553,7 @@
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            <span>Export CSV</span>
-          </button>
-
-          <!-- Reset / New Audit Button -->
-          <button 
-            type="button" 
-            id="resetAuditBtn" 
-            class="px-2.5 py-2 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors text-xs"
-            title="Clear current audit and upload another export"
-          >
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
+            <span>CSV</span>
           </button>
         </div>
       </section>
@@ -535,10 +561,10 @@
       <!-- Showing Count Header -->
       <div class="flex items-center justify-between text-xs text-slate-400 px-1">
         <div>
-          Showing <span id="displayedCount" class="font-semibold text-white">0</span> non-mutual accounts
+          Showing <span id="displayedCount" class="font-semibold text-white">0</span> accounts in active view
         </div>
         <div class="text-[11px] text-slate-500 hidden sm:block">
-          💡 Click "View Profile" to open in new tab & mark as reviewed
+          💡 Accounts marked unfollowed automatically drop off this list
         </div>
       </div>
 
@@ -561,13 +587,13 @@
           </table>
         </div>
 
-        <!-- Empty state when no rows match -->
+        <!-- Empty state when all accounts are processed -->
         <div id="noResultsState" class="hidden py-16 text-center space-y-3">
-          <div class="w-12 h-12 mx-auto rounded-full bg-slate-800 text-slate-400 flex items-center justify-center">
+          <div class="w-12 h-12 mx-auto rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xl">
             🎉
           </div>
-          <h4 class="text-base font-semibold text-slate-200">No non-mutual accounts to show</h4>
-          <p class="text-xs text-slate-400 max-w-sm mx-auto">Either all followed accounts follow you back, or all non-mutual accounts have been marked as "Kept".</p>
+          <h4 class="text-base font-semibold text-slate-200">All caught up! Zero pending accounts.</h4>
+          <p class="text-xs text-slate-400 max-w-sm mx-auto">All accounts have been reviewed, unfollowed, or marked as Kept. Uncheck "Hide Unfollowed" above if you'd like to inspect completed accounts.</p>
         </div>
       </div>
     </div>
@@ -617,7 +643,7 @@
           id="queueOpenBtn" 
           class="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 group"
         >
-          <span>Open Profile &amp; Mark Reviewed</span>
+          <span>Open Profile &amp; Mark Unfollowed</span>
           <span class="text-xs font-mono bg-indigo-900/60 px-2 py-0.5 rounded border border-indigo-400/30 text-indigo-200">Spacebar</span>
           <span class="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
         </button>
@@ -657,8 +683,8 @@
 
       <!-- Speed Queue Pro-Tip -->
       <div class="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-left text-[11px] text-indigo-300 space-y-1">
-        <p class="font-semibold text-white">⚡ Pro-Tip for 2-Second Reviews:</p>
-        <p>In the new tab, simply tap <strong>Following &rarr; Unfollow</strong>, then switch back and press <kbd class="font-mono bg-slate-900 px-1 rounded">Spacebar</kbd> to automatically load the next profile!</p>
+        <p class="font-semibold text-white">⚡ Pro-Tip for Fast Reviews:</p>
+        <p>In the new tab, simply tap <strong>Following &rarr; Unfollow</strong>, then switch back and press <kbd class="font-mono bg-slate-900 px-1 rounded">Spacebar</kbd>. It marks them completed, saves to memory, and loads the next account instantly!</p>
       </div>
     </div>
   </div>
@@ -681,7 +707,6 @@
       </div>
 
       <div class="space-y-4 text-xs text-slate-300 leading-relaxed">
-        <!-- Why bots cause bans -->
         <div class="p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-1.5 text-rose-200">
           <h4 class="font-bold text-rose-300 flex items-center gap-1.5">
             <span>⚠️</span> Why 1-Click "Bulk Unfollow" Bots Get Banned
@@ -691,7 +716,6 @@
           </p>
         </div>
 
-        <!-- The Golden Rate Limits -->
         <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
           <h4 class="font-bold text-white text-sm">Meta Platform Hourly &amp; Daily Limits:</h4>
           <ul class="space-y-1.5 text-slate-300">
@@ -710,7 +734,6 @@
           </ul>
         </div>
 
-        <!-- Mobile Trick: Least Interacted With -->
         <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
           <h4 class="font-bold text-white text-sm flex items-center gap-1.5">
             <span>📱</span> Secret Native Mobile App Shortcut:
@@ -724,7 +747,6 @@
           </ol>
         </div>
 
-        <!-- Safe 1000+ Plan -->
         <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3.5 space-y-1 text-indigo-300">
           <h4 class="font-bold text-white">🗓️ Recommended 7-Day Plan for 1,000+ Accounts:</h4>
           <p>Set Mutuals Audit's Safe Daily Pacing to <strong>100 accounts/day</strong>. Do one session of 50 in the morning with Speed Queue, and one session of 50 in the evening. In <strong>7 to 10 days</strong>, your follow list is completely clean with zero risk to your account.</p>
@@ -749,7 +771,7 @@
   <footer class="mt-auto border-t border-slate-800/60 bg-slate-950 py-6 text-center text-xs text-slate-500">
     <div class="max-w-7xl mx-auto px-4 space-y-2">
       <p>Mutuals Audit is 100% open-source and operates strictly client-side. No user data or credentials are ever sent over a network.</p>
-      <p class="text-[11px] text-slate-600">Zero automated unfollowing • Rate-limit safe • Static GitHub Pages deployment</p>
+      <p class="text-[11px] text-slate-600">Persistent local storage • Zero re-uploading • Rate-limit safe • Static GitHub Pages deployment</p>
     </div>
   </footer>
 
@@ -758,16 +780,23 @@
     (function () {
       'use strict';
 
+      // --- Storage Keys ---
+      const WHITELIST_STORAGE_KEY = 'mutuals_audit_whitelist';
+      const UNFOLLOWED_STORAGE_KEY = 'mutuals_audit_unfollowed';
+      const DATASET_STORAGE_KEY = 'mutuals_audit_cached_dataset';
+      const DAILY_PACING_STORAGE_KEY = 'mutuals_audit_daily_progress';
+
       // --- State Management ---
       let followingUsers = [];     // Array of { username, displayUsername, href, timestamp }
       let followerSet = new Set();  // Set of follower usernames (lowercase)
-      let nonMutuals = [];         // Array of { username, displayUsername, href, timestamp, whitelisted, checked }
+      let nonMutuals = [];         // Array of { username, displayUsername, href, timestamp, whitelisted, unfollowed }
       
-      const WHITELIST_STORAGE_KEY = 'mutuals_audit_whitelist';
-      const DAILY_PACING_STORAGE_KEY = 'mutuals_audit_daily_progress';
-
       let whitelistedSet = new Set();
-      let checkedSessionSet = new Set();
+      let unfollowedSet = new Set();
+
+      let savedFollowingCount = 0;
+      let savedFollowerCount = 0;
+      let savedAuditTimestamp = 0;
 
       // Daily Pacing State
       let dailyState = {
@@ -785,7 +814,7 @@
         return new Date().toISOString().split('T')[0];
       }
 
-      // Load whitelist from localStorage
+      // --- Persistence Handlers ---
       function loadWhitelist() {
         try {
           const raw = localStorage.getItem(WHITELIST_STORAGE_KEY);
@@ -808,6 +837,92 @@
         }
       }
 
+      function loadUnfollowed() {
+        try {
+          const raw = localStorage.getItem(UNFOLLOWED_STORAGE_KEY);
+          if (raw) {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list)) {
+              unfollowedSet = new Set(list.map(u => String(u).toLowerCase()));
+            }
+          }
+        } catch (e) {
+          console.warn('Could not read unfollowed set from localStorage', e);
+        }
+      }
+
+      function persistUnfollowed() {
+        try {
+          localStorage.setItem(UNFOLLOWED_STORAGE_KEY, JSON.stringify(Array.from(unfollowedSet)));
+        } catch (e) {
+          console.warn('Could not write unfollowed set to localStorage', e);
+        }
+      }
+
+      function persistDataset() {
+        try {
+          const payload = {
+            savedAt: savedAuditTimestamp || Date.now(),
+            followingCount: savedFollowingCount || followingUsers.length,
+            followerCount: savedFollowerCount || followerSet.size,
+            nonMutuals: nonMutuals.map(u => ({
+              u: u.username,
+              d: u.displayUsername,
+              h: u.href,
+              t: u.timestamp
+            }))
+          };
+          localStorage.setItem(DATASET_STORAGE_KEY, JSON.stringify(payload));
+        } catch (e) {
+          console.warn('Could not cache dataset in localStorage', e);
+        }
+      }
+
+      function restoreCachedDataset() {
+        try {
+          const raw = localStorage.getItem(DATASET_STORAGE_KEY);
+          if (raw) {
+            const payload = JSON.parse(raw);
+            if (payload && Array.isArray(payload.nonMutuals) && payload.nonMutuals.length > 0) {
+              savedFollowingCount = payload.followingCount || payload.nonMutuals.length;
+              savedFollowerCount = payload.followerCount || 0;
+              savedAuditTimestamp = payload.savedAt || Date.now();
+
+              nonMutuals = payload.nonMutuals.map(item => ({
+                username: item.u,
+                displayUsername: item.d,
+                href: item.h,
+                timestamp: item.t,
+                whitelisted: whitelistedSet.has(item.u),
+                unfollowed: unfollowedSet.has(item.u)
+              }));
+
+              displayActiveAudit(false);
+              return true;
+            }
+          }
+        } catch (e) {
+          console.warn('Could not restore cached dataset', e);
+        }
+        return false;
+      }
+
+      function clearStoredAudit() {
+        if (confirm('Clear the saved audit dataset from your browser storage? (Your Whitelist will remain preserved)')) {
+          localStorage.removeItem(DATASET_STORAGE_KEY);
+          followingUsers = [];
+          followerSet = new Set();
+          nonMutuals = [];
+          savedFollowingCount = 0;
+          savedFollowerCount = 0;
+          resultsDashboard.classList.add('hidden');
+          activeAuditSessionBar.classList.add('hidden');
+          uploadSection.classList.remove('hidden');
+          clearAlerts();
+          showToast('Saved audit cleared. Ready for new export.');
+        }
+      }
+
       // Load daily progress
       function loadDailyProgress() {
         try {
@@ -818,7 +933,6 @@
               dailyState.count = Number(parsed.count) || 0;
               dailyState.target = Number(parsed.target) || 50;
             } else {
-              // New day, reset count
               dailyState.date = getTodayDateString();
               dailyState.count = 0;
               dailyState.target = Number(parsed.target) || 50;
@@ -886,13 +1000,20 @@
       }
 
       loadWhitelist();
+      loadUnfollowed();
       loadDailyProgress();
 
       // --- DOM Elements ---
+      const activeAuditSessionBar = document.getElementById('activeAuditSessionBar');
+      const activeAuditSessionDetails = document.getElementById('activeAuditSessionDetails');
+      const toggleUploadZoneBtn = document.getElementById('toggleUploadZoneBtn');
+      const clearAuditDataBtn = document.getElementById('clearAuditDataBtn');
+
       const toggleGuideBtn = document.getElementById('toggleGuideBtn');
       const guideContent = document.getElementById('guideContent');
       const guideChevron = document.getElementById('guideChevron');
 
+      const uploadSection = document.getElementById('uploadSection');
       const dropZone = document.getElementById('dropZone');
       const fileInput = document.getElementById('fileInput');
       const browseBtn = document.getElementById('browseBtn');
@@ -909,16 +1030,17 @@
       const resultsDashboard = document.getElementById('resultsDashboard');
       const statFollowing = document.getElementById('statFollowing');
       const statFollowers = document.getElementById('statFollowers');
-      const statNotFollowing = document.getElementById('statNotFollowing');
+      const statRemaining = document.getElementById('statRemaining');
+      const statUnfollowed = document.getElementById('statUnfollowed');
       const statWhitelisted = document.getElementById('statWhitelisted');
       const displayedCount = document.getElementById('displayedCount');
 
       const searchInput = document.getElementById('searchInput');
       const sortSelect = document.getElementById('sortSelect');
+      const hideUnfollowedCheckbox = document.getElementById('hideUnfollowedCheckbox');
       const hideWhitelistedCheckbox = document.getElementById('hideWhitelistedCheckbox');
       const copyListBtn = document.getElementById('copyListBtn');
       const downloadCsvBtn = document.getElementById('downloadCsvBtn');
-      const resetAuditBtn = document.getElementById('resetAuditBtn');
 
       const resultsTableBody = document.getElementById('resultsTableBody');
       const noResultsState = document.getElementById('noResultsState');
@@ -927,7 +1049,6 @@
       const toastMessage = document.getElementById('toastMessage');
       const toastIcon = document.getElementById('toastIcon');
 
-      // High-Efficiency & Safety Elements
       const dailyTargetSelect = document.getElementById('dailyTargetSelect');
       const resetDailyBtn = document.getElementById('resetDailyBtn');
       const startSpeedQueueBtn = document.getElementById('startSpeedQueueBtn');
@@ -951,7 +1072,6 @@
       const closeSafetyModalBtn = document.getElementById('closeSafetyModalBtn');
       const confirmSafetyModalBtn = document.getElementById('confirmSafetyModalBtn');
 
-      // Detect mobile device to default mobile deep linking
       const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       if (isMobileDevice) {
         mobileDeepLinkCheckbox.checked = true;
@@ -969,19 +1089,15 @@
         }, 3200);
       }
 
-      // --- Safety Modal Handlers ---
-      openSafetyModalBtn.addEventListener('click', () => {
-        safetyModal.classList.remove('hidden');
-      });
-      closeSafetyModalBtn.addEventListener('click', () => {
-        safetyModal.classList.add('hidden');
-      });
+      // Safety Modal
+      openSafetyModalBtn.addEventListener('click', () => safetyModal.classList.remove('hidden'));
+      closeSafetyModalBtn.addEventListener('click', () => safetyModal.classList.add('hidden'));
       confirmSafetyModalBtn.addEventListener('click', () => {
         safetyModal.classList.add('hidden');
         showToast('Safe review habits active!', '🛡️');
       });
 
-      // --- Daily Pacing Settings ---
+      // Daily Pacing
       dailyTargetSelect.addEventListener('change', (e) => {
         dailyState.target = Number(e.target.value) || 50;
         persistDailyProgress();
@@ -998,7 +1114,17 @@
         }
       });
 
-      // --- Guide Accordion Toggle ---
+      // Upload Zone Toggle in Session Bar
+      toggleUploadZoneBtn.addEventListener('click', () => {
+        uploadSection.classList.toggle('hidden');
+        if (!uploadSection.classList.contains('hidden')) {
+          uploadSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+
+      clearAuditDataBtn.addEventListener('click', clearStoredAudit);
+
+      // Guide Toggle
       let guideExpanded = true;
       toggleGuideBtn.addEventListener('click', () => {
         guideExpanded = !guideExpanded;
@@ -1012,7 +1138,6 @@
         toggleGuideBtn.setAttribute('aria-expanded', String(guideExpanded));
       });
 
-      // --- Alert Handlers ---
       function showError(msg) {
         alertContainer.classList.remove('hidden');
         errorAlert.classList.remove('hidden');
@@ -1042,7 +1167,7 @@
         warningMessage.textContent = '';
       }
 
-      // --- Recursive Schema-Resilient JSON Parser ---
+      // --- JSON Extraction ---
       function extractUserEntries(data) {
         const entries = [];
         const seen = new Set();
@@ -1106,7 +1231,7 @@
         return entries;
       }
 
-      // --- Archive & JSON Processor ---
+      // --- Process Files ---
       async function processUploadedFiles(files) {
         clearAlerts();
         showLoading('Inspecting uploaded files...');
@@ -1141,7 +1266,6 @@
         }
       }
 
-      // Handle .ZIP Archive with JSZip
       async function handleZipFile(zipFile) {
         const sizeMb = zipFile.size / (1024 * 1024);
         if (sizeMb > 50) {
@@ -1226,10 +1350,13 @@
           }
         }
 
-        finalizeAudit();
+        savedFollowingCount = followingUsers.length;
+        savedFollowerCount = followerSet.size;
+        savedAuditTimestamp = Date.now();
+
+        finalizeAudit(true);
       }
 
-      // Handle raw .JSON files dropped/selected
       async function handleRawJsonFiles(jsonFileList) {
         showLoading('Parsing raw JSON files...');
         let followingData = null;
@@ -1275,11 +1402,15 @@
         }
 
         followingUsers = extractUserEntries(followingData);
-        finalizeAudit();
+        savedFollowingCount = followingUsers.length;
+        savedFollowerCount = followerSet.size;
+        savedAuditTimestamp = Date.now();
+
+        finalizeAudit(true);
       }
 
       // --- Finalize Audit Computation ---
-      function finalizeAudit() {
+      function finalizeAudit(saveToStorage = true) {
         loadingIndicator.classList.add('hidden');
 
         nonMutuals = [];
@@ -1291,11 +1422,20 @@
               href: f.href,
               timestamp: f.timestamp,
               whitelisted: whitelistedSet.has(f.username),
-              checked: checkedSessionSet.has(f.username)
+              unfollowed: unfollowedSet.has(f.username)
             });
           }
         }
 
+        if (saveToStorage) {
+          persistDataset();
+        }
+
+        displayActiveAudit(saveToStorage);
+        showToast(`Audit complete: Found ${nonMutuals.length} non-mutual accounts! (Auto-saved)`, '🎉');
+      }
+
+      function displayActiveAudit(isNew = false) {
         if (guideExpanded) {
           guideExpanded = false;
           guideContent.classList.add('hidden');
@@ -1303,20 +1443,41 @@
           toggleGuideBtn.setAttribute('aria-expanded', 'false');
         }
 
-        statFollowing.textContent = followingUsers.length.toLocaleString();
-        statFollowers.textContent = followerSet.size.toLocaleString();
-        statNotFollowing.textContent = nonMutuals.length.toLocaleString();
-        updateWhitelistStat();
+        // Hide upload dropzone so users see results immediately
+        uploadSection.classList.add('hidden');
+        activeAuditSessionBar.classList.remove('hidden');
+
+        updateSessionBarText();
+        updateSummaryCards();
         updateDailyPacingUI();
 
         resultsDashboard.classList.remove('hidden');
         renderTable();
-        showToast(`Audit complete: Found ${nonMutuals.length} non-mutual accounts!`, '🎉');
       }
 
-      function updateWhitelistStat() {
-        const count = nonMutuals.filter(u => whitelistedSet.has(u.username)).length;
-        statWhitelisted.textContent = count.toLocaleString();
+      function updateSessionBarText() {
+        const dateStr = savedAuditTimestamp 
+          ? new Date(savedAuditTimestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+          : 'recent export';
+        
+        const unfollowedCount = nonMutuals.filter(u => unfollowedSet.has(u.username)).length;
+        const keptCount = nonMutuals.filter(u => whitelistedSet.has(u.username)).length;
+        const pendingCount = nonMutuals.length - unfollowedCount - keptCount;
+
+        activeAuditSessionDetails.textContent = `Saved from ${dateStr} • ${nonMutuals.length} total non-mutuals (${pendingCount} pending, ${unfollowedCount} unfollowed, ${keptCount} kept). Resumed automatically.`;
+      }
+
+      function updateSummaryCards() {
+        statFollowing.textContent = (savedFollowingCount || followingUsers.length).toLocaleString();
+        statFollowers.textContent = (savedFollowerCount || followerSet.size).toLocaleString();
+
+        const unfollowedCount = nonMutuals.filter(u => unfollowedSet.has(u.username)).length;
+        const keptCount = nonMutuals.filter(u => whitelistedSet.has(u.username)).length;
+        const pendingCount = Math.max(0, nonMutuals.length - unfollowedCount - keptCount);
+
+        statRemaining.textContent = pendingCount.toLocaleString();
+        statUnfollowed.textContent = unfollowedCount.toLocaleString();
+        statWhitelisted.textContent = keptCount.toLocaleString();
       }
 
       function getEffectiveTargetUrl(user) {
@@ -1330,13 +1491,18 @@
         return `https://www.instagram.com/${encodeURIComponent(user.displayUsername)}`;
       }
 
-      // --- Table Rendering (Strictly XSS Safe via textContent) ---
+      // --- Table & Filtering ---
       function getFilteredList() {
         const query = searchInput.value.trim().toLowerCase();
         const sortVal = sortSelect.value;
+        const hideUnfollowed = hideUnfollowedCheckbox.checked;
         const hideWhitelisted = hideWhitelistedCheckbox.checked;
 
         let filtered = nonMutuals.slice();
+
+        if (hideUnfollowed) {
+          filtered = filtered.filter(u => !unfollowedSet.has(u.username));
+        }
 
         if (hideWhitelisted) {
           filtered = filtered.filter(u => !whitelistedSet.has(u.username));
@@ -1359,7 +1525,7 @@
 
       function renderTable() {
         const filtered = getFilteredList();
-        queueFilteredList = filtered; // synchronize for Speed Queue
+        queueFilteredList = filtered;
 
         displayedCount.textContent = filtered.length.toLocaleString();
 
@@ -1378,9 +1544,9 @@
         filtered.forEach((user, index) => {
           const tr = document.createElement('tr');
           const isWhitelisted = whitelistedSet.has(user.username);
-          const isChecked = checkedSessionSet.has(user.username);
+          const isUnfollowed = unfollowedSet.has(user.username);
 
-          tr.className = `transition-colors hover:bg-slate-800/40 ${isChecked ? 'opacity-60 bg-slate-950/40' : ''}`;
+          tr.className = `transition-colors hover:bg-slate-800/40 ${isUnfollowed ? 'opacity-50 bg-slate-950/40' : ''}`;
 
           // Index Col
           const tdIndex = document.createElement('td');
@@ -1425,7 +1591,12 @@
           const badgeWrapper = document.createElement('div');
           badgeWrapper.className = 'flex items-center justify-center gap-1.5 flex-wrap';
 
-          if (isWhitelisted) {
+          if (isUnfollowed) {
+            const unfollowedBadge = document.createElement('span');
+            unfollowedBadge.className = 'text-[11px] font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1';
+            unfollowedBadge.textContent = '✓ Unfollowed';
+            badgeWrapper.appendChild(unfollowedBadge);
+          } else if (isWhitelisted) {
             const whiteBadge = document.createElement('span');
             whiteBadge.className = 'text-[11px] font-medium bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1';
             whiteBadge.textContent = '★ Kept';
@@ -1437,13 +1608,6 @@
             badgeWrapper.appendChild(notMutualBadge);
           }
 
-          if (isChecked) {
-            const checkedBadge = document.createElement('span');
-            checkedBadge.className = 'text-[10px] font-medium bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded';
-            checkedBadge.textContent = 'Reviewed';
-            badgeWrapper.appendChild(checkedBadge);
-          }
-
           tdStatus.appendChild(badgeWrapper);
           tr.appendChild(tdStatus);
 
@@ -1453,6 +1617,21 @@
           const actionsWrapper = document.createElement('div');
           actionsWrapper.className = 'flex items-center justify-end gap-2';
 
+          // Mark Unfollowed Toggle Button
+          const unfollowBtn = document.createElement('button');
+          unfollowBtn.type = 'button';
+          unfollowBtn.className = `p-1.5 px-2.5 rounded-lg border transition-all text-xs font-medium flex items-center gap-1 ${
+            isUnfollowed 
+              ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30' 
+              : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700'
+          }`;
+          unfollowBtn.title = isUnfollowed ? 'Click to mark as not yet unfollowed' : 'Mark as unfollowed in localStorage';
+          unfollowBtn.textContent = isUnfollowed ? '✓ Unfollowed' : 'Mark Unfollowed';
+          unfollowBtn.addEventListener('click', () => {
+            toggleUnfollowed(user.username);
+          });
+
+          // Keep / Whitelist Button
           const keepBtn = document.createElement('button');
           keepBtn.type = 'button';
           keepBtn.className = `p-1.5 rounded-lg border transition-all text-xs flex items-center gap-1 ${
@@ -1466,22 +1645,24 @@
             toggleWhitelist(user.username);
           });
 
+          // Safe Profile Link (Opens in new tab, marks as unfollowed / checked)
           const profileLink = document.createElement('a');
           profileLink.className = 'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 text-xs font-medium transition-colors';
           profileLink.target = '_blank';
           profileLink.rel = 'noopener noreferrer';
           profileLink.href = getEffectiveTargetUrl(user);
-          
           profileLink.textContent = mobileDeepLinkCheckbox.checked ? 'Open App ↗' : 'View Profile ↗';
           profileLink.addEventListener('click', () => {
-            if (!checkedSessionSet.has(user.username)) {
-              checkedSessionSet.add(user.username);
+            if (!unfollowedSet.has(user.username)) {
+              unfollowedSet.add(user.username);
+              persistUnfollowed();
               incrementDailyProgress(1);
+              updateSummaryCards();
+              updateSessionBarText();
             }
-            tr.classList.add('opacity-60', 'bg-slate-950/40');
-            renderTable();
           });
 
+          actionsWrapper.appendChild(unfollowBtn);
           actionsWrapper.appendChild(keepBtn);
           actionsWrapper.appendChild(profileLink);
           tdActions.appendChild(actionsWrapper);
@@ -1491,6 +1672,22 @@
         });
 
         resultsTableBody.appendChild(fragment);
+      }
+
+      function toggleUnfollowed(username) {
+        const lower = username.toLowerCase();
+        if (unfollowedSet.has(lower)) {
+          unfollowedSet.delete(lower);
+          showToast(`Marked @${lower} as pending`);
+        } else {
+          unfollowedSet.add(lower);
+          incrementDailyProgress(1);
+          showToast(`Marked @${lower} as unfollowed (saved)`, '✓');
+        }
+        persistUnfollowed();
+        updateSummaryCards();
+        updateSessionBarText();
+        renderTable();
       }
 
       function toggleWhitelist(username) {
@@ -1503,22 +1700,21 @@
           showToast(`Saved @${lower} to Kept list (persisted)`, '★');
         }
         persistWhitelist();
-        updateWhitelistStat();
+        updateSummaryCards();
+        updateSessionBarText();
         renderTable();
       }
 
       // --- SPEED REVIEW QUEUE (FOCUS MODE) LOGIC ---
       function openSpeedQueue() {
-        queueFilteredList = getFilteredList().filter(u => !whitelistedSet.has(u.username));
+        // Queue operates on pending accounts (neither unfollowed nor whitelisted)
+        queueFilteredList = getFilteredList().filter(u => !unfollowedSet.has(u.username) && !whitelistedSet.has(u.username));
         if (queueFilteredList.length === 0) {
-          showToast('No unkept accounts left to review in queue!', '🎉');
+          showToast('No pending accounts left to review in queue! All caught up.', '🎉');
           return;
         }
 
-        // Pick first unreviewed account
-        const firstUnchecked = queueFilteredList.findIndex(u => !checkedSessionSet.has(u.username));
-        currentQueueIndex = firstUnchecked !== -1 ? firstUnchecked : 0;
-
+        currentQueueIndex = 0;
         isSpeedQueueOpen = true;
         speedQueueModal.classList.remove('hidden');
         renderSpeedQueueItem();
@@ -1531,31 +1727,42 @@
       }
 
       function renderSpeedQueueItem() {
+        // Filter out any already completed from list
+        while (currentQueueIndex < queueFilteredList.length) {
+          const u = queueFilteredList[currentQueueIndex];
+          if (!unfollowedSet.has(u.username) && !whitelistedSet.has(u.username)) {
+            break;
+          }
+          currentQueueIndex++;
+        }
+
         if (currentQueueIndex >= queueFilteredList.length) {
-          // Finished queue!
-          showToast('Queue completed! Great job.', '🎉');
+          showToast('All pending accounts reviewed! Outstanding work.', '🎉');
           closeSpeedQueue();
           return;
         }
 
         const user = queueFilteredList[currentQueueIndex];
         const isWhitelisted = whitelistedSet.has(user.username);
-        const isChecked = checkedSessionSet.has(user.username);
+        const isUnfollowed = unfollowedSet.has(user.username);
 
-        queueProgressBadge.textContent = `${currentQueueIndex + 1} of ${queueFilteredList.length}`;
+        queueProgressBadge.textContent = `${currentQueueIndex + 1} of ${queueFilteredList.length} pending`;
         queueUsername.textContent = `@${user.displayUsername}`;
         queueFollowedDate.textContent = `Followed on: ${formatDate(user.timestamp)}`;
 
-        // Avatar
         queueAvatar.textContent = user.displayUsername.charAt(0).toUpperCase();
         queueAvatar.className = `w-20 h-20 mx-auto rounded-full flex items-center justify-center font-bold text-2xl text-white shadow-xl ${getAvatarColor(user.username)}`;
 
-        // Status Badges
         while (queueStatusBadges.firstChild) {
           queueStatusBadges.removeChild(queueStatusBadges.firstChild);
         }
 
-        if (isWhitelisted) {
+        if (isUnfollowed) {
+          const ub = document.createElement('span');
+          ub.className = 'text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-medium';
+          ub.textContent = '✓ Unfollowed';
+          queueStatusBadges.appendChild(ub);
+        } else if (isWhitelisted) {
           const wb = document.createElement('span');
           wb.className = 'text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-medium';
           wb.textContent = '★ Kept (Whitelisted)';
@@ -1565,13 +1772,6 @@
           nb.className = 'text-xs bg-rose-500/10 text-rose-300 border border-rose-500/20 px-2.5 py-0.5 rounded-full font-medium';
           nb.textContent = 'Not Following Back';
           queueStatusBadges.appendChild(nb);
-        }
-
-        if (isChecked) {
-          const cb = document.createElement('span');
-          cb.className = 'text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-medium';
-          cb.textContent = 'Reviewed';
-          queueStatusBadges.appendChild(cb);
         }
 
         queueKeepBtn.textContent = isWhitelisted ? '★ Kept' : '☆ Keep / Whitelist';
@@ -1585,13 +1785,15 @@
         const url = getEffectiveTargetUrl(user);
         window.open(url, '_blank', 'noopener,noreferrer');
 
-        // Mark checked
-        if (!checkedSessionSet.has(user.username)) {
-          checkedSessionSet.add(user.username);
+        // Automatically mark as unfollowed & save to localStorage
+        if (!unfollowedSet.has(user.username)) {
+          unfollowedSet.add(user.username);
+          persistUnfollowed();
           incrementDailyProgress(1);
+          updateSummaryCards();
+          updateSessionBarText();
         }
 
-        // Advance
         currentQueueIndex++;
         renderSpeedQueueItem();
       }
@@ -1620,7 +1822,6 @@
         }
       }
 
-      // Speed Queue Event Listeners
       startSpeedQueueBtn.addEventListener('click', openSpeedQueue);
       closeSpeedQueueBtn.addEventListener('click', closeSpeedQueue);
       queueOpenBtn.addEventListener('click', handleQueueOpenAndNext);
@@ -1632,7 +1833,6 @@
       window.addEventListener('keydown', (e) => {
         if (!isSpeedQueueOpen) return;
 
-        // Space or Enter -> Open and Advance
         if (e.code === 'Space' || e.key === 'Enter') {
           e.preventDefault();
           handleQueueOpenAndNext();
@@ -1653,14 +1853,14 @@
 
       // --- OPEN BATCH OF 5 MULTI-TAB LAUNCHER ---
       openBatch5Btn.addEventListener('click', () => {
-        const unreviewed = getFilteredList().filter(u => !whitelistedSet.has(u.username) && !checkedSessionSet.has(u.username));
+        const pending = getFilteredList().filter(u => !unfollowedSet.has(u.username) && !whitelistedSet.has(u.username));
 
-        if (unreviewed.length === 0) {
-          showToast('No unreviewed accounts left in this view!', '🎉');
+        if (pending.length === 0) {
+          showToast('No pending accounts left to open in this view!', '🎉');
           return;
         }
 
-        const batch = unreviewed.slice(0, 5);
+        const batch = pending.slice(0, 5);
         let openedCount = 0;
 
         batch.forEach(user => {
@@ -1668,14 +1868,17 @@
           const win = window.open(url, '_blank');
           if (win) {
             openedCount++;
-            checkedSessionSet.add(user.username);
+            unfollowedSet.add(user.username);
           }
         });
 
         if (openedCount > 0) {
+          persistUnfollowed();
           incrementDailyProgress(openedCount);
+          updateSummaryCards();
+          updateSessionBarText();
           renderTable();
-          showToast(`Opened ${openedCount} profiles! Unfollow on each tab, then close with Ctrl+W.`, '🚀');
+          showToast(`Opened ${openedCount} profiles! Marked as unfollowed. Close tabs with Ctrl+W.`, '🚀');
         } else {
           showWarning('Browser blocked multi-tabs. Please click the popup icon in your address bar and select "Always allow popups" to use Batch Open.');
         }
@@ -1706,21 +1909,18 @@
         return avatarColors[Math.abs(hash) % avatarColors.length];
       }
 
-      // --- Event Listeners for Filters ---
+      // --- Filters & Actions ---
       searchInput.addEventListener('input', renderTable);
       sortSelect.addEventListener('change', renderTable);
+      hideUnfollowedCheckbox.addEventListener('change', renderTable);
       hideWhitelistedCheckbox.addEventListener('change', renderTable);
       mobileDeepLinkCheckbox.addEventListener('change', renderTable);
 
       // Copy Usernames to Clipboard
       copyListBtn.addEventListener('click', () => {
-        const hideWhitelisted = hideWhitelistedCheckbox.checked;
-        let list = nonMutuals;
-        if (hideWhitelisted) {
-          list = list.filter(u => !whitelistedSet.has(u.username));
-        }
+        const list = getFilteredList();
         if (list.length === 0) {
-          showToast('No usernames to copy', 'ℹ️');
+          showToast('No usernames to copy in current view', 'ℹ️');
           return;
         }
         const text = list.map(u => u.displayUsername).join('\n');
@@ -1738,7 +1938,7 @@
           return;
         }
         const rows = [
-          ['Username', 'Profile URL', 'Followed Date', 'Whitelisted', 'Reviewed Session']
+          ['Username', 'Profile URL', 'Followed Date', 'Whitelisted', 'Unfollowed']
         ];
         for (const u of nonMutuals) {
           rows.push([
@@ -1746,7 +1946,7 @@
             `"${u.href.replace(/"/g, '""')}"`,
             `"${formatDate(u.timestamp)}"`,
             whitelistedSet.has(u.username) ? 'YES' : 'NO',
-            checkedSessionSet.has(u.username) ? 'YES' : 'NO'
+            unfollowedSet.has(u.username) ? 'YES' : 'NO'
           ]);
         }
         const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
@@ -1761,21 +1961,7 @@
         showToast('CSV downloaded successfully!', '💾');
       });
 
-      // Reset Audit
-      resetAuditBtn.addEventListener('click', () => {
-        if (confirm('Clear the current audit results to upload another export? (Your whitelist and daily progress will remain saved)')) {
-          followingUsers = [];
-          followerSet = new Set();
-          nonMutuals = [];
-          checkedSessionSet = new Set();
-          resultsDashboard.classList.add('hidden');
-          clearAlerts();
-          fileInput.value = '';
-          showToast('Ready for new export file');
-        }
-      });
-
-      // --- Drag & Drop Handling ---
+      // --- Drag & Drop ---
       ['dragenter', 'dragover'].forEach(eventName => {
         dropZone.addEventListener(eventName, (e) => {
           e.preventDefault();
@@ -1814,7 +2000,7 @@
         }
       });
 
-      // --- Instant Sample Data Demo ---
+      // --- Sample Data Demo ---
       loadSampleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         clearAlerts();
@@ -1854,10 +2040,21 @@
 
           followingUsers = sampleFollowing;
           followerSet = sampleFollowers;
-          finalizeAudit();
-          showToast('Sample dataset loaded! Explore features below.', '🚀');
+          savedFollowingCount = sampleFollowing.length;
+          savedFollowerCount = sampleFollowers.size;
+          savedAuditTimestamp = Date.now();
+
+          finalizeAudit(true);
+          showToast('Sample dataset loaded and saved! Explore features below.', '🚀');
         }, 300);
       });
+
+      // --- INITIALIZE ON PAGE LOAD ---
+      // Auto-restore any previously uploaded audit from browser localStorage
+      const restored = restoreCachedDataset();
+      if (!restored) {
+        uploadSection.classList.remove('hidden');
+      }
 
     })();
   </script>
